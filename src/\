@@ -1,0 +1,126 @@
+#ifndef _ORACLE_GENERAL_H_
+#define _ORACLE_GENERAL_H_
+
+#include "precision.h"
+#include "graph.h"
+
+#include <vector>
+#include <utility>
+#include <unordered_map>
+#include <map>
+
+using std::pair;
+using std::make_pair;
+using std::vector;
+using std::map;
+using std::unordered_map;
+using std::random_shuffle;
+
+class OracleGeneral {
+    
+// Fields
+
+    int n;
+    Graph g;
+
+    vector<int> portalNumbers;
+    vector<int> portalIndices;
+    
+    struct Portal {
+        vector< W > D_v;
+        vector< map< W, int > > N_l;
+    };
+    vector<Portal> portals;
+
+    struct Label {
+        unordered_map< set< pair<W, int> > > S_v;
+        unordered_map< int, map< W, int > > P_l;
+    };
+    unordered_map<Label> labels;
+
+    struct Vertex {
+        int label;
+    };
+    vector<Vertex> vertices;
+
+    struct Piece {
+        vector<int> nodes;
+        vector<W> distances;
+    }
+    vector<Piece> pieces;
+
+// Methods
+
+    void initializeWitihLabels(const vector<int> &labels, int ro) {
+        if (ro == -1) ro = (int)sqrt(n);
+        selectPortals(ro);
+    }
+
+    void selectPortals(int ro) {
+        for (int i=0; i<n; ++i) {
+            portalNumbers.push_back(i);
+        }
+        random_shuffle(portalNumbers.begin(), portalNumbers.end());
+        portalNumbers.resize(ro);
+        portalIndices = vector<int>(n, -1);
+        for (int i=0; i<ro; ++i) {
+            portalIndices[portalNumbers[i]] = i;
+        }
+    }
+    
+    void initializeDistances(int v) {
+        typedef pair<W, int> QEl;
+        priority_queue< QEl, vector<QEl>, greater<QEl> > queue;
+        queue.push(make_pair(0, v));
+
+        while (!queue.empty()) {
+            QEl curr = queue.top(); queue.pop();
+            
+        }
+    }
+
+public:
+    OracleGeneral(
+            int n, 
+            const vector< pair<int, int> > edges, 
+            const vector<W> weights,
+            int ro = -1) :
+        n(n), g(n, edges, weights)
+    {
+        vector<int> labels;
+        for(int i=0; i<n; ++i) labels.push_back(i);
+        initializeWithLabels(labels, ro);
+    }
+    
+    OracleGeneral(
+            int n, 
+            const vector< pair<int, int> > &edges, 
+            const vector<W> &weights, 
+            vector<int> labels) :
+        n(n), g(n, edges, weights)
+    {
+        initializeWithLabels(labels, ro);
+    }
+
+    void setLabel(int v, int l) {
+        int lp = vertices[v].label;
+        
+        for (int p=0; p<(int)portals.size(); ++p) {
+            portals[p].N_l[lp].erase(make_pair(portals[p].D_v[v], v));
+            portals[p].N_l[l].insert(make_pair(portals[p].D_v[v], v));
+        }
+
+        for (int p=0; p<(int)pieces.size(); ++p) {
+            for (int i=0; i<(int)pieces[p].nodes.size(); ++i) {
+                int u = pieces[p].nodes[i];
+                W d = pieces[p].distances[i];
+                labels[lp].S_v[u].erase(make_pair(d, u));
+                labels[l].S_v[u].insert(make_pair(d, u));
+            }
+        }
+    }
+    W distanceToLabel(int v, int l);
+    W distanceBetweenLabels(int l1, int l2);
+};
+
+#endif
