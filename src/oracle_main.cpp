@@ -24,5 +24,15 @@ int main() {
         }
     }
 
+    oracle.print();
+
+    oracle.setLabel(1, 2);
+
+    oracle.print();
+
+    oracle.setLabel(1, 1);
+
+    oracle.print();
+
     return 0;
 }
