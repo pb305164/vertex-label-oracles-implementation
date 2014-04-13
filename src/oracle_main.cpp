@@ -24,9 +24,9 @@ int main() {
     vector< int > labels;
     vector< pair< int, int > > updates, queries;
 
-    const int K = 10000;
+    const int K = 50000;
 
-    OracleTester::generateGraph(1000, 4000, 200, n, edges, weights);
+    OracleTester::generateGraph(10000, 40000, 200, n, edges, weights);
     OracleTester::selectQueries(n, 4, K, labels, updates);
 
     int T = 10;
@@ -35,7 +35,8 @@ int main() {
 /*
     {
         OracleGeneral3Approx oracle3(n, edges, weights, labels);
-        OracleGeneral5Approx oracle5(n, edges, weights, labels);
+        OracleGeneral5ApproxQuery oracle5q(n, edges, weights, labels);
+        OracleGeneral5ApproxUpdate oracle5u(n, edges, weights, labels);
         OracleNaive oraclen(n, edges, weights, labels);
 
         for (int i=0; i<(int)updates.size(); ++i) {
@@ -44,7 +45,8 @@ int main() {
             pair<int, int> update = updates[i];
             oraclen.setLabel(update.first, update.second);
             oracle3.setLabel(update.first, update.second);
-            oracle5.setLabel(update.first, update.second);
+            oracle5q.setLabel(update.first, update.second);
+            oracle5u.setLabel(update.first, update.second);
 
             for (int t=0; t<T; ++t) {
                 int u = rand()%n;
@@ -52,12 +54,15 @@ int main() {
             
                 auto exact = oraclen.distanceToLabel(u, oraclen.labelOf(v));
                 auto approx3 = oracle3.distanceToLabel(u, oracle3.labelOf(v));
-                auto approx5 = oracle5.distanceToLabel(u, oracle5.labelOf(v));
+                auto approx5q = oracle5q.distanceToLabel(u, oracle5q.labelOf(v));
+                auto approx5u = oracle5u.distanceToLabel(u, oracle5u.labelOf(v));
 
                 assert(exact.first <= approx3.first);
-                assert(exact.first <= approx5.first);
+                assert(exact.first <= approx5q.first);
+                assert(exact.first <= approx5u.first);
                 assert(exact.first * 3 >= approx3.first);
-                assert(exact.first * 5 >= approx5.first);
+                assert(exact.first * 5 >= approx5q.first);
+                assert(exact.first * 5 >= approx5u.first);
             
             }
 
@@ -78,6 +83,13 @@ int main() {
 // Time test
 
     {
+      printf("Comparing:\n");
+      printf(" - Dijkstra oracle\n");
+      printf(" - 3 approximate oracle\n");
+      printf(" - 5 approximate oracle with constant query time\n");
+      printf(" - 5 approximate oracle with constant update time\n");
+      printf("\n");
+
       printf(" -- INITIALIZATION --\n");
       printf("Oracle Naive\n");
       startTime();
@@ -89,9 +101,14 @@ int main() {
       OracleGeneral3Approx oracle3(n, edges, weights, labels);
       stopTime();
       
-      printf("Oracle 5-approx\n");
+      printf("Oracle 5-approx query\n");
       startTime();
-      OracleGeneral5Approx oracle5(n, edges, weights, labels);
+      OracleGeneral5ApproxQuery oracle5q(n, edges, weights, labels);
+      stopTime();
+      
+      printf("Oracle 5-approx update\n");
+      startTime();
+      OracleGeneral5ApproxUpdate oracle5u(n, edges, weights, labels);
       stopTime();
       
       printf("\n -- UPDATE --\n");
@@ -107,10 +124,16 @@ int main() {
         oracle3.setLabel(u.first, u.second);
       stopTime();
       
-      printf("Oracle 5-approx\n");
+      printf("Oracle 5-approx query\n");
       startTime();
       for (auto &u: updates)
-        oracle5.setLabel(u.first, u.second);
+        oracle5q.setLabel(u.first, u.second);
+      stopTime();
+      
+      printf("Oracle 5-approx update\n");
+      startTime();
+      for (auto &u: updates)
+        oracle5u.setLabel(u.first, u.second);
       stopTime();
 
       updates.clear();
@@ -130,10 +153,16 @@ int main() {
         oracle3.distanceToLabel(u.first, u.second);
       stopTime();
       
-      printf("Oracle 5-approx\n");
+      printf("Oracle 5-approx query\n");
       startTime();
       for (auto &u: updates)
-        oracle5.distanceToLabel(u.first, u.second);
+        oracle5q.distanceToLabel(u.first, u.second);
+      stopTime();
+      
+      printf("Oracle 5-approx update\n");
+      startTime();
+      for (auto &u: updates)
+        oracle5u.distanceToLabel(u.first, u.second);
       stopTime();
 
       updates.clear();
