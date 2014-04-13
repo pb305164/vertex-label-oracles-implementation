@@ -50,6 +50,10 @@ public:
         labels[v] = l;
     }
 
+    int labelOf(int v) {
+        return labels[v];
+    }
+
     pair<W, int> distanceToLabel(int v, int l) {
         typedef pair<W, int> QEl;
         priority_queue< QEl, vector<QEl>, greater<QEl> > queue;

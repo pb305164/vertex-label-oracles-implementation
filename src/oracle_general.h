@@ -270,6 +270,10 @@ public:
         applyLabel(v, l);
     }
 
+    int labelOf(int v) {
+        return vertices[v].label;
+    }
+
     pair<W, int> distanceToLabel(int v, int l) {
         pair<W, int> result(infinity, -1);
         for (auto &curr: vertices[v].dist) {

@@ -1,43 +1,48 @@
 #include "oracle_naive.h"
 #include "oracle_general.h"
+#include "oracle_tester.h"
 
 #include <cstdio>
+#include <cassert>
 
 int main() {
     int n;
     vector< pair<int, int> > edges;
     vector< W > weights;
 
-    scanf("%d", &n);
-    int u, v;
-    W w;
-    while (scanf("%d %d %f", &u, &v, &w) != EOF) {
-        edges.push_back(make_pair(u,v));
-        weights.push_back(w);
-    }
+    vector< int > labels;
+    vector< pair< int, int > > updates;
 
-    OracleGeneral oracle(n, edges, weights);
-    OracleNaive oraclen(n, edges, weights);
+    OracleTester::generateGraph(100, 2000, 200, n, edges, weights);
+    OracleTester::selectQueries(n, 2, 10000, labels, updates);
 
-    for (int i=0; i<n; ++i) {
-        for (int j=0; j<n; ++j) {
-            pair<W, pair<int, int> > ans = oracle.distanceBetweenLabels(i, j);
-            printf("%d %d -> %f : %d %d\n", i, j, ans.first, ans.second.first, ans.second.second);
-            ans = oraclen.distanceBetweenLabels(i, j);
-            printf("%d %d -> %f : %d %d\n", i, j, ans.first, ans.second.first, ans.second.second);
-            printf("\n");
+    W cappr = 3;
+    int T = 10;
+
+// Correctness test
+
+    {
+        OracleGeneral oracle(n, edges, weights, labels);
+        OracleNaive oraclen(n, edges, weights, labels);
+
+        for (pair<int, int> update: updates) {
+            oraclen.setLabel(update.first, update.second);
+            oracle.setLabel(update.first, update.second);
+
+            for (int t=0; t<T; ++t) {
+                int u = rand()%n;
+                int v = rand()%n;
+            
+                auto exact = oraclen.distanceToLabel(u, oraclen.labelOf(v));
+                auto approx = oracle.distanceToLabel(u, oracle.labelOf(v));
+
+                assert(exact.first <= approx.first);
+                assert(exact.first * cappr >= approx.first);
+            
+            }
         }
     }
-/*
-    oracle.print();
 
-    oracle.setLabel(1, 2);
 
-    oracle.print();
-
-    oracle.setLabel(1, 1);
-
-    oracle.print();
-*/
     return 0;
 }
