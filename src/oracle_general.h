@@ -206,18 +206,9 @@ class OracleGeneral {
             int u = curr.second;
             int ll = vertices[u].label;
 
-            auto it = labels[l].S_v[u].begin();
             labels[l].S_v[u].insert(make_pair(du, v));
-
-            if (it != labels[l].S_v[u].begin()) {
-                if (it != labels[l].S_v[u].end()) {
-                    labels[l].P_l[ll].erase(make_pair(it->first, make_pair(u, it->second)));
-                }
-                labels[l].P_l[ll].insert(make_pair(du, make_pair(u, v)));
-            }
-            
-            it = labels[ll].S_v[v].begin();
-            labels[ll].P_l[l].insert(make_pair(it->first, make_pair(v, it->second)));
+            labels[l].P_l[ll].insert(make_pair(du, make_pair(u, v)));
+            labels[ll].P_l[l].insert(make_pair(du, make_pair(v, u)));
         }
     }
 
@@ -233,22 +224,13 @@ class OracleGeneral {
             int u = curr.second;
             int ll = vertices[u].label;
             
-            auto it = labels[ll].S_v[v].begin();
-            labels[ll].P_l[l].erase(make_pair(it->first, make_pair(v, it->second)));
-            if (labels[ll].P_l[l].empty()) labels[ll].P_l.erase(l);
-            
-            it = labels[l].S_v[u].begin();
+            labels[ll].P_l[l].erase(make_pair(du, make_pair(v, u)));
+            labels[l].P_l[ll].erase(make_pair(du, make_pair(u, v)));
             labels[l].S_v[u].erase(make_pair(du, v));
 
-            if (it != labels[l].S_v[u].begin()) {
-                labels[l].P_l[ll].erase(make_pair(du, make_pair(u, v)));
-
-                it = labels[l].S_v[u].begin();
-                if (it != labels[l].S_v[u].end()) {
-                    labels[l].P_l[ll].insert(make_pair(it->first, make_pair(u, it->second)));
-                }
+            if (labels[ll].P_l[l].empty()) {
+                labels[ll].P_l.erase(l);
             }
-
             if (labels[l].S_v[u].empty()) {
                 labels[l].S_v.erase(u);
             }
@@ -268,7 +250,7 @@ public:
         g(n, edges, weights)
     {
         vector<int> labels;
-        for(int i=0; i<n; ++i) labels.push_back(i);
+        for (int i=0; i<n; ++i) labels.push_back(i);
         initializeWithLabels(labels, ro);
     }
     
