@@ -79,7 +79,10 @@ class OracleGeneral {
         for (int v=0; v<g.n; ++v)
             initializeDistances(v);
 
-        initializeLabels();
+        for (int v=0; v<g.n; ++v)
+            crossPieces(v);
+
+        initializeStructures();
     }
 
     void selectPortals(int ro) {
@@ -158,17 +161,28 @@ class OracleGeneral {
                 }
             }
         }
-
-        int l = vertices[v].label;
-        for (int i=0; i<(int)vertices[v].dist.size(); ++i){
-            pair<W, int> curr = vertices[v].dist[i];
-            W du = curr.first;
-            int u = curr.second;
-            labels[l].S_v[u].insert(make_pair(du, v));
-        }
     }
 
-    void initializeLabels() {
+    void crossPieces(int v) {
+        vector< pair<W, int> > truncated;
+        for (auto curr: vertices[v].dist) {
+            if (vertices[curr.second].p > make_pair(curr.first, v)) {
+                truncated.push_back(curr);
+            }
+        }
+        swap(vertices[v].dist, truncated);
+    }
+
+    void initializeStructures() {
+        for (int v=0; v<g.n; ++v) {
+            int l = vertices[v].label;
+            for (auto curr: vertices[v].dist) {
+                W du = curr.first;
+                int u = curr.second;
+                labels[l].S_v[u].insert(make_pair(du, v));
+            }
+        }
+
         for (auto &label: labels) {
             for (auto &S: label.S_v) {
                 int v = S.first;
