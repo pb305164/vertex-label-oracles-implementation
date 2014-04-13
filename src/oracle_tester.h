@@ -12,6 +12,7 @@ using std::pair;
 using std::vector;
 using std::set;
 using std::make_pair;
+using std::swap;
 
 class OracleTester {
 public:

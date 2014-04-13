@@ -1,0 +1,6 @@
+#ifndef _ORACLE_GENERAL_APPROX_H_
+#define _ORACLE_GENERAL_APPROX_H_
+
+
+
+#endif
