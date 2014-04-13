@@ -195,6 +195,8 @@ class OracleGeneral {
     }
 
     void applyLabel(int v, int l) {
+//        printf("apply %d %d\n", v, l);
+        
         vertices[v].label = l;
         
         for (int pi=0; pi<(int)portals.size(); ++pi) {
@@ -214,6 +216,7 @@ class OracleGeneral {
 
     void purgeLabel(int v) {
         int l = vertices[v].label;
+//        printf("purge %d %d\n", v, l);
         
         for (int pi=0; pi<(int)portals.size(); ++pi) {
             portals[pi].N_l[l].erase(make_pair(portals[pi].D_v[v], v));
@@ -282,10 +285,11 @@ public:
                 break;
             }
         }
-        pair<W, int> p = vertices[v].p;
-        auto it = portals[p.second].N_l[l].begin();
-        if (it != portals[p.second].N_l[l].end()) 
-            result = min(result, make_pair(p.first + it->first, it->second));
+        for (auto &p: portals) {
+            auto it = p.N_l[l].begin();
+            if (it == p.N_l[l].end()) continue;
+            result = min(result, make_pair(p.D_v[v] + it->first, it->second));
+        }
         return result;
     }
 
@@ -309,6 +313,14 @@ public:
     }
 
     void print() {
+        for (int v=0; v<(int)vertices.size(); ++v) {
+            printf("V: %d -> %f %d\n", v, vertices[v].p.first, vertices[v].p.second);
+            for (auto curr: vertices[v].dist) {
+                printf("(%.1f %d) ", curr.first, curr.second);
+            }
+            printf("\n");
+        }
+
         for (int i=0; i<(int)portals.size(); ++i) {
             cout << "portal " << portalNumbers[i] << endl;
             for (int j=0; j<(int)portals[i].N_l.size(); ++j) {

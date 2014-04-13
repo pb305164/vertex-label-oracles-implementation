@@ -13,8 +13,8 @@ int main() {
     vector< int > labels;
     vector< pair< int, int > > updates;
 
-    OracleTester::generateGraph(100, 2000, 200, n, edges, weights);
-    OracleTester::selectQueries(n, 2, 10000, labels, updates);
+    OracleTester::generateGraph(1000, 4000, 200, n, edges, weights);
+    OracleTester::selectQueries(n, 4, 10000, labels, updates);
 
     W cappr = 3;
     int T = 10;
@@ -25,9 +25,14 @@ int main() {
         OracleGeneral oracle(n, edges, weights, labels);
         OracleNaive oraclen(n, edges, weights, labels);
 
-        for (pair<int, int> update: updates) {
+        for (int i=0; i<(int)updates.size(); ++i) {
+            printf("%d\n", i);
+            
+            pair<int, int> update = updates[i];
             oraclen.setLabel(update.first, update.second);
             oracle.setLabel(update.first, update.second);
+
+//            oracle.print();
 
             for (int t=0; t<T; ++t) {
                 int u = rand()%n;

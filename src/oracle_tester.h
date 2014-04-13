@@ -75,6 +75,7 @@ public:
             int u = rand()%n;
             updates.push_back(make_pair(v, curr[u]));
             curr[v] = curr[u];
+            v = u;
         }
     }
 

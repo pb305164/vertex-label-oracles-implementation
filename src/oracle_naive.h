@@ -53,77 +53,111 @@ public:
     int labelOf(int v) {
         return labels[v];
     }
-
-    pair<W, int> distanceToLabel(int v, int l) {
-        typedef pair<W, int> QEl;
-        priority_queue< QEl, vector<QEl>, greater<QEl> > queue;
-        vector<W> dist(g.n, infinity);
-
-        queue.push(make_pair(0, v));
-        dist[v] = 0;
-
-        while (!queue.empty()) {
-            QEl curr = queue.top(); queue.pop();
-            W ud = curr.first;
-            int u = curr.second;
-            if (ud != dist[u]) continue;
-
-            if (labels[u] == l) {
-                return curr;
-            }
-
-            for (int i=0; i<(int)g.edges[u].size(); ++i) {
-                W wd = ud + g.edges[u][i].w;
-                int w = g.edges[u][i].v;
-
-                if (wd < dist[w]) {
-                    dist[w] = wd;
-                    queue.push(make_pair(wd,w));
-                }
-            }
-        }
-
-        return make_pair(infinity, -1);
-    }
-
-    pair<W, pair<int, int> > distanceBetweenLabels(int l1, int l2) {
-        typedef pair<W, int> QEl;
-        priority_queue< QEl, vector<QEl>, greater<QEl> > queue;
-        vector<W> dist(g.n, infinity);
-        vector<int> source(g.n, -1);
-
-        for (int v=0; v<(int)labels.size(); ++v) {
-            if (labels[v] == l1) {
-                queue.push(make_pair(0, v));
-                dist[v] = 0;
-                source[v] = v;
-            }
-        }
-
-        while (!queue.empty()) {
-            QEl curr = queue.top(); queue.pop();
-            W ud = curr.first;
-            int u = curr.second;
-            if (ud != dist[u]) continue;
-
-            if (labels[u] == l2) {
-                return make_pair(ud, make_pair(source[u], u));
-            }
-
-            for (int i=0; i<(int)g.edges[u].size(); ++i) {
-                W wd = ud + g.edges[u][i].w;
-                int w = g.edges[u][i].v;
-
-                if (wd < dist[w]) {
-                    dist[w] = wd;
-                    source[w] = source[u];
-                    queue.push(make_pair(wd,w));
-                }
-            }
-        }
-
-        return make_pair(infinity, make_pair(-1, -1));
-    }
+    
+    W distanceToVertex(int v, int w);
+    pair<W, int> distanceToLabel(int v, int l);
+    pair<W, pair<int, int> > distanceBetweenLabels(int l1, int l2);
 };
+
+W OracleNaive::distanceToVertex(int v, int w) {
+    typedef pair<W, int> QEl;
+    priority_queue< QEl, vector<QEl>, greater<QEl> > queue;
+    vector<W> dist(g.n, infinity);
+
+    queue.push(make_pair(0, v));
+    dist[v] = 0;
+
+    while (!queue.empty()) {
+        QEl curr = queue.top(); queue.pop();
+        W ud = curr.first;
+        int u = curr.second;
+        if (ud != dist[u]) continue;
+
+        if (u == w) return dist[u];
+
+        for (int i=0; i<(int)g.edges[u].size(); ++i) {
+            W wd = ud + g.edges[u][i].w;
+            int w = g.edges[u][i].v;
+
+            if (wd < dist[w]) {
+                dist[w] = wd;
+                queue.push(make_pair(wd,w));
+            }
+        }
+    }
+
+    return infinity;
+}
+
+pair<W, int> OracleNaive::distanceToLabel(int v, int l) {
+    typedef pair<W, int> QEl;
+    priority_queue< QEl, vector<QEl>, greater<QEl> > queue;
+    vector<W> dist(g.n, infinity);
+
+    queue.push(make_pair(0, v));
+    dist[v] = 0;
+
+    while (!queue.empty()) {
+        QEl curr = queue.top(); queue.pop();
+        W ud = curr.first;
+        int u = curr.second;
+        if (ud != dist[u]) continue;
+
+        if (labels[u] == l) {
+            return curr;
+        }
+
+        for (int i=0; i<(int)g.edges[u].size(); ++i) {
+            W wd = ud + g.edges[u][i].w;
+            int w = g.edges[u][i].v;
+
+            if (wd < dist[w]) {
+                dist[w] = wd;
+                queue.push(make_pair(wd,w));
+            }
+        }
+    }
+
+    return make_pair(infinity, -1);
+}
+
+pair<W, pair<int, int> > OracleNaive::distanceBetweenLabels(int l1, int l2) {
+    typedef pair<W, int> QEl;
+    priority_queue< QEl, vector<QEl>, greater<QEl> > queue;
+    vector<W> dist(g.n, infinity);
+    vector<int> source(g.n, -1);
+
+    for (int v=0; v<(int)labels.size(); ++v) {
+        if (labels[v] == l1) {
+            queue.push(make_pair(0, v));
+            dist[v] = 0;
+            source[v] = v;
+        }
+    }
+
+    while (!queue.empty()) {
+        QEl curr = queue.top(); queue.pop();
+        W ud = curr.first;
+        int u = curr.second;
+        if (ud != dist[u]) continue;
+
+        if (labels[u] == l2) {
+            return make_pair(ud, make_pair(source[u], u));
+        }
+
+        for (int i=0; i<(int)g.edges[u].size(); ++i) {
+            W wd = ud + g.edges[u][i].w;
+            int w = g.edges[u][i].v;
+
+            if (wd < dist[w]) {
+                dist[w] = wd;
+                source[w] = source[u];
+                queue.push(make_pair(wd,w));
+            }
+        }
+    }
+
+    return make_pair(infinity, make_pair(-1, -1));
+}
 
 #endif
