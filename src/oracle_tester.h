@@ -21,9 +21,21 @@ public:
         scanf("%d", &n);
         int u, v;
         W w;
-        while (scanf("%d %d %f", &u, &v, &w)) {
+        while (scanf("%d %d %f", &u, &v, &w) != EOF) {
             edges.push_back(make_pair(u, v));
             weights.push_back(w);
+        }
+    }
+    
+    static
+    void readUnweightedGraphFromInput(int &n, vector< pair<int, int> > &edges, vector< W > &weights, int minimal = 0) {
+        scanf("%d", &n);
+        int u, v;
+        W w;
+        while (scanf("%d %d", &u, &v) != EOF) {
+            edges.push_back(make_pair(u - minimal, v - minimal));
+            weights.push_back(1.);
+            n = max(n, max(u, v));
         }
     }
 

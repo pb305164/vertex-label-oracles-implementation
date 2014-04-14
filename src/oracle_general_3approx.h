@@ -2,16 +2,17 @@
 #define _ORACLE_GENERAL_3APPROX_H_
 
 #include "oracle_general_approx.h"
-#include <unordered_map>
+#include <map>
+#include <cassert>
 
-using std::unordered_map;
+using std::map;
 
 class OracleGeneral3Approx : public OracleGeneralApprox {
 private:    
 
     struct Label {
-        unordered_map< int, set< pair<W, int> > > S_v;
-        unordered_map< int, set< pair<W, pair<int, int> > > > P_l;
+        map< int, set< pair<W, int> > > S_v;
+        map< int, set< pair<W, pair<int, int> > > > P_l;
     };
     vector<Label> labels;
 
@@ -56,7 +57,7 @@ private:
 
             labels[l].S_v[u].insert(make_pair(du, v));
             labels[l].P_l[ll].insert(make_pair(du, make_pair(v, u)));
-            labels[ll].P_l[l].insert(make_pair(du, make_pair(u, v)));
+            if (v != u) labels[ll].P_l[l].insert(make_pair(du, make_pair(u, v)));
         }
     }
 
@@ -73,20 +74,25 @@ private:
             int u = curr.second;
             int ll = vertices[u].label;
             
-            labels[ll].P_l[l].erase(make_pair(du, make_pair(u, v)));
-            labels[l].P_l[ll].erase(make_pair(du, make_pair(v, u)));
-            labels[l].S_v[u].erase(make_pair(du, v));
+            auto it1 = labels[ll].P_l.find(l);
+            it1->second.erase(make_pair(du, make_pair(u, v)));
+            if (it1->second.empty()) {
+                labels[ll].P_l.erase(it1);
+            }
 
-            if (labels[ll].P_l[l].empty()) {
-                labels[ll].P_l.erase(l);
+            if (v != u) {
+                auto it2 = labels[l].P_l.find(ll);
+                it2->second.erase(make_pair(du, make_pair(v, u)));
+                if (it2->second.empty()) {
+                    labels[l].P_l.erase(it2);
+                }
             }
-            if (labels[l].S_v[u].empty()) {
-                labels[l].S_v.erase(u);
+
+            auto it3 = labels[l].S_v.find(u);
+            it3->second.erase(make_pair(du, v));
+            if (it3->second.empty()) {
+                labels[l].S_v.erase(it3);
             }
-            if (labels[l].P_l[ll].empty()) {
-                labels[l].P_l.erase(ll);
-            }
-            
         }
     }
 

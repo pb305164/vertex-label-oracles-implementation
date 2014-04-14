@@ -3,16 +3,16 @@
 
 #include "precision.h"
 
-#include <unordered_map>
+#include <map>
 
-using std::unordered_map;
+using std::map;
 
 class OracleGeneral5ApproxQuery : public OracleGeneralApprox {
 private:
 // Fields
 
   struct Label {
-    unordered_map< int, set< pair<W, int> > > S_v;
+    map< int, set< pair<W, int> > > S_v;
   };
   vector<Label> labels;
 
@@ -113,6 +113,73 @@ private:
 
 // Methods
     virtual
+    void initializePortals(int pi) {
+        int p = portalNumbers[pi];
+        
+        typedef pair<W, int> QEl;
+        priority_queue< QEl, vector<QEl>, greater<QEl> > queue;
+        vector<W> dist(g.n, infinity);
+        
+        queue.push(make_pair(0, p));
+        dist[p] = 0;
+
+        while (!queue.empty()) {
+            QEl curr = queue.top(); queue.pop();
+            W ud = curr.first;
+            int u = curr.second;
+            if (ud != dist[u]) continue;
+
+            for (int i=0; i<(int)g.edges[u].size(); ++i) {
+                W wd = ud + g.edges[u][i].w;
+                int w = g.edges[u][i].v;
+
+                if (wd < dist[w]) {
+                    dist[w] = wd;
+                    queue.push(make_pair(wd,w));
+                }
+            }
+        }
+
+        portals[pi].N_l.resize(g.n);
+        swap(portals[pi].D_v, dist);
+    }
+    
+    virtual
+    void initializeDistances(int v) {
+        typedef pair<W, int> QEl;
+        priority_queue< QEl, vector<QEl>, greater<QEl> > queue;
+        vector<W> dist(g.n, infinity);
+
+        queue.push(make_pair(0, v));
+        dist[v] = 0;
+
+        while (!queue.empty()) {
+            QEl curr = queue.top(); queue.pop();
+            W ud = curr.first;
+            int u = curr.second;
+            if (ud != dist[u]) continue;
+
+            if (portalIndices[u] != -1) {
+                vertices[v].pd = ud;
+                vertices[v].p = portalIndices[u];
+                portals[portalIndices[u]].N_l[vertices[v].label].insert(make_pair(ud, v));
+                break;
+            }
+            vertices[v].dist.push_back(curr);
+
+            for (int i=0; i<(int)g.edges[u].size(); ++i) {
+                W wd = ud + g.edges[u][i].w;
+                int w = g.edges[u][i].v;
+
+                if (wd < dist[w]) {
+                    dist[w] = wd;
+                    queue.push(make_pair(wd,w));
+                }
+            }
+        }
+    }
+
+    virtual
     void initializeStructures() {}
     
     virtual
@@ -126,7 +193,6 @@ private:
     virtual
     void purgeLabel(int v) {
         int l = vertices[v].label;
-       
         int p = vertices[v].p; 
         portals[p].N_l[l].erase(make_pair(vertices[v].pd, v));
     }
