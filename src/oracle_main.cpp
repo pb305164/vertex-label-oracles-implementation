@@ -6,20 +6,23 @@
 
 #include <cstdio>
 #include <cassert>
+#include <chrono>
 
-time_t start, stop;
+using namespace std::chrono;
+
+high_resolution_clock::time_point start, stop;
 void startTime() {
-    start = clock();
+    start = high_resolution_clock::now();
 }
 
 float stopTime() {
-    stop = clock();
-    return (float)(stop - start + 1) / CLOCKS_PER_SEC;
+    stop = high_resolution_clock::now();
+    return duration_cast< duration<float> >(stop - start).count();
 }
 
 void stopTimePrint() {
-    stop = clock();
-    printf("%.10f\n", (float)(stop - start + 1) / CLOCKS_PER_SEC);
+    stop = high_resolution_clock::now();
+    printf("%.12f\n", duration_cast< duration<float> >(stop - start).count());
 }
 
 template <class O>
@@ -37,7 +40,7 @@ double timeProportionTest(O &oracle, int m, const vector<int> &type, const vecto
     
 const int K = 10;
 const int T = 20;
-const int M = 5000;
+const int M = 1;
 
 template <class O>
 void performVertexToLabelProportionTest(int n, const vector< pair<int, int> > &edges, const vector<W> &weights, float frac = 1.) {
@@ -92,26 +95,26 @@ void performVertexToLabelProportionTest(int n, const vector< pair<int, int> > &e
 */
         }
 
-        printf("%.8f ", timeProportionTest(oracle, M, type, query)); 
+        printf("%.12f ", timeProportionTest(oracle, M, type, query)); 
     }
 
     printf("\n");
 }
 
-void printLabels(int n) {
+void printLabels(int n, float frac = 1.) {
     for (int t=0; t<=T; ++t) {
-        printf("%.1f ", (float)(t*2-T)/T);
+        printf("%.1f ", (float)(t*2-T)/T/frac);
     }
     printf("\n");
 }
 
 void performVertexToLabelProportionTestAll(int n, const vector< pair<int, int> > &edges, const vector<W> &weights) {
-    printLabels(n);
-    performVertexToLabelProportionTest<OracleNaive>(n, edges, weights);
-    performVertexToLabelProportionTest<OracleGeneral3Approx>(n, edges, weights);
-    performVertexToLabelProportionTest<OracleGeneral5ApproxUpdate>(n, edges, weights);
-    performVertexToLabelProportionTest<OracleGeneral5ApproxQuery>(n, edges, weights);
-    performVertexToLabelProportionTest<FullPlanarOracle>(n, edges, weights);
+    printLabels(n, 2.);
+    performVertexToLabelProportionTest<OracleNaive>(n, edges, weights, 2.);
+    performVertexToLabelProportionTest<OracleGeneral3Approx>(n, edges, weights, 2.);
+    performVertexToLabelProportionTest<OracleGeneral5ApproxUpdate>(n, edges, weights, 2.);
+    performVertexToLabelProportionTest<OracleGeneral5ApproxQuery>(n, edges, weights, 2.);
+    performVertexToLabelProportionTest<FullPlanarOracle>(n, edges, weights, 2.);
 }
 
 int main() {
@@ -127,14 +130,14 @@ int main() {
 
     fprintf(stderr, "Read!\n");
     fflush(stderr);
-/*
+
     {
         performVertexToLabelProportionTestAll(n, edges, weights);
     }
-*/
+
 
 // Correctness test
-
+/*
     {
         const int K = 50000;
         int T = 10;
@@ -190,7 +193,7 @@ int main() {
             }
         }
     }
-
+*/
     // Time test
 /*
     {
