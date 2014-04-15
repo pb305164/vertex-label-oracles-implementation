@@ -31,7 +31,6 @@ public:
     void readUnweightedGraphFromInput(int &n, vector< pair<int, int> > &edges, vector< W > &weights, int minimal = 0) {
         scanf("%d", &n);
         int u, v;
-        W w;
         while (scanf("%d %d", &u, &v) != EOF) {
             edges.push_back(make_pair(u - minimal, v - minimal));
             weights.push_back(1.);
