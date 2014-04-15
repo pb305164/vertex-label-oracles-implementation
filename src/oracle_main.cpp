@@ -14,12 +14,12 @@ void startTime() {
 
 float stopTime() {
     stop = clock();
-    return (float)(stop - start) / CLOCKS_PER_SEC;
+    return (float)(stop - start + 1) / CLOCKS_PER_SEC;
 }
 
 void stopTimePrint() {
     stop = clock();
-    printf("%.5f\n", (float)(stop - start) / CLOCKS_PER_SEC);
+    printf("%.10f\n", (float)(stop - start + 1) / CLOCKS_PER_SEC);
 }
 
 template <class O>
@@ -40,8 +40,7 @@ const int T = 20;
 const int M = 5000;
 
 template <class O>
-void performVertexToLabelProportionTest(int n, const vector< pair<int, int> > &edges, const vector<W> &weights) {
-
+void performVertexToLabelProportionTest(int n, const vector< pair<int, int> > &edges, const vector<W> &weights, float frac = 1.) {
 
     srand(-1);
 
@@ -61,8 +60,8 @@ void performVertexToLabelProportionTest(int n, const vector< pair<int, int> > &e
         vector< int > type(M);
         vector< pair<int, int> > query(M);
 
-        int a = pow(n, 0.5+(float)(t-T/2)/T);
-        int b = pow(n, 0.5+(float)(T/2-t)/T);
+        int a = pow(n, 0.5+(float)(t-T/2)/T/frac);
+        int b = pow(n, 0.5+(float)(T/2-t)/T/frac);
         vector<int> typeCycle(a+b);
         for (int i=0; i<a; ++i) typeCycle[i] = 0;
         for (int i=a; i<a+b; ++i) typeCycle[i] = 1;
@@ -123,9 +122,8 @@ int main() {
     vector< int > labels;
     vector< pair< int, int > > updates, queries;
 
-
-    //OracleTester::generateGraph(80000, 320000, 200, n, edges, weights);
-    OracleTester::readGraphFromInput(n, edges, weights);
+    //OracleTester::generateGraph(2000, 8000, 200, n, edges, weights);
+    OracleTester::readUnweightedGraphFromInput(n, edges, weights);
 
     fprintf(stderr, "Read!\n");
     fflush(stderr);
