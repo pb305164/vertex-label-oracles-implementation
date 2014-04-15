@@ -112,6 +112,7 @@ void performVertexToLabelProportionTestAll(int n, const vector< pair<int, int> >
     performVertexToLabelProportionTest<OracleGeneral3Approx>(n, edges, weights);
     performVertexToLabelProportionTest<OracleGeneral5ApproxUpdate>(n, edges, weights);
     performVertexToLabelProportionTest<OracleGeneral5ApproxQuery>(n, edges, weights);
+    performVertexToLabelProportionTest<FullPlanarOracle>(n, edges, weights);
 }
 
 int main() {

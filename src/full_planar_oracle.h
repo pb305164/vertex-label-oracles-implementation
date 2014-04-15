@@ -155,7 +155,7 @@ public:
             const vector< pair< int, int > >& edges, 
             const vector< W >& weights,
             const vector< int > llabels,
-            W eps) : labels(n) {
+            W eps = .5) : labels(n) {
         ro = min(n, 3);
         vertices = vector<Vertex>(n);
         for (int i=0; i<n; ++i) vertices[i].label = llabels[i];
