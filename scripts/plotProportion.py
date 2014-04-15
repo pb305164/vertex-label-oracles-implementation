@@ -14,8 +14,8 @@ colors = ['r', 'b', 'g', 'y']
 
 plt.grid(True)
 
-data = [line.split() for line in sys.stdin]
-a = [list(x) for x in zip(*data)];
+a = [line.split() for line in sys.stdin]
+#a = [list(x) for x in zip(*data)];
 
 labels = a[0];
 k = (len(labels)-1)/4;

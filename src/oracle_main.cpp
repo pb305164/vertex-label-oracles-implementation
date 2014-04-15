@@ -28,17 +28,21 @@ double timeProportionTest(O &oracle, int m, const vector<int> &type, const vecto
     for (int i=0; i<m; ++i) {
         switch (type[i]) {
             case 0: oracle.setLabel(query[i].first, query[i].second); break;
-            case 1: oracle.distanceBetweenLabels(query[i].first, query[i].second); break;
+            case 1: oracle.distanceToLabel(query[i].first, query[i].second); break;
         }
     }
     return stopTime();
 }
+    
+const int K = 10;
+const int T = 20;
+const int M = 100;
 
+template <class O>
 void performVertexToLabelProportionTest(int n, const vector< pair<int, int> > &edges, const vector<W> &weights) {
 
-    const int K = 10;
-    const int T = 20;
-    const int M = 1000;
+
+    srand(-1);
 
     vector<int> labels(n);
     for (int i=0; i<n; ++i) labels[i] = rand() % n;
@@ -48,18 +52,8 @@ void performVertexToLabelProportionTest(int n, const vector< pair<int, int> > &e
 
     fprintf(stderr, "Constructing...\n");
     fflush(stderr);
-//    OracleNaive oraclen(n, edges, weights, labels);
-    fprintf(stderr, "Naive - done\n");
-    fflush(stderr);
-    OracleGeneral3ApproxLight oracle3(n, edges, weights, labels);
-    fprintf(stderr, "3 approx - done\n");
-    fflush(stderr);
-//    OracleGeneral5ApproxQuery oracle5q(n, edges, weights, labels);
-    fprintf(stderr, "5 approx query - done\n");
-    fflush(stderr);
-//    OracleGeneral5ApproxUpdate oracle5u(n, edges, weights, labels);
-    fprintf(stderr, "5 approx update - done\n");
-    fflush(stderr);
+    O oracle(n, edges, weights, labels);
+    fprintf(stderr, " - done\n");
 
     for (int t=0; t<=T; ++t) {
         fprintf(stderr, "t: %d\n", t);
@@ -100,13 +94,25 @@ void performVertexToLabelProportionTest(int n, const vector< pair<int, int> > &e
 */
         }
 
-        printf("%d:%d ", t, T-t);
-//        printf("%.8f ", timeProportionTest(oraclen, M, type, query)); 
-        printf("%.8f ", timeProportionTest(oracle3, M, type, query)); 
-//        printf("%.8f ", timeProportionTest(oracle5q, M, type, query)); 
-//        printf("%.8f ", timeProportionTest(oracle5u, M, type, query));
-        printf("\n");
+        printf("%.8f ", timeProportionTest(oracle, M, type, query)); 
     }
+
+    printf("\n");
+}
+
+void printLabels() {
+    for (int t=0; t<=T; ++t) {
+        printf("%d:%d ", t, T-t);
+    }
+    printf("\n");
+}
+
+void performVertexToLabelProportionTestAll(int n, const vector< pair<int, int> > &edges, const vector<W> &weights) {
+    printLabels();
+    performVertexToLabelProportionTest<OracleNaive>(n, edges, weights);
+    performVertexToLabelProportionTest<OracleGeneral3Approx>(n, edges, weights);
+    performVertexToLabelProportionTest<OracleGeneral5ApproxUpdate>(n, edges, weights);
+    performVertexToLabelProportionTest<OracleGeneral5ApproxQuery>(n, edges, weights);
 }
 
 int main() {
@@ -125,7 +131,7 @@ int main() {
     fflush(stderr);
 
     {
-        performVertexToLabelProportionTest(n, edges, weights);
+        performVertexToLabelProportionTestAll(n, edges, weights);
     }
 
 
