@@ -2,17 +2,17 @@
 #define _ORACLE_GENERAL_3APPROX_H_
 
 #include "oracle_general_approx.h"
-#include <map>
+#include <unordered_map>
 #include <cassert>
 
-using std::map;
+using std::unordered_map;
 
 class OracleGeneral3Approx : public OracleGeneralApprox {
 private:    
 
     struct Label {
-        map< int, set< pair<W, int> > > S_v;
-        map< int, set< pair<W, pair<int, int> > > > P_l;
+        unordered_map< int, set< pair<W, int> > > S_v;
+        unordered_map< int, set< pair<W, pair<int, int> > > > P_l;
     };
     vector<Label> labels;
 

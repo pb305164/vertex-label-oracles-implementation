@@ -28,7 +28,7 @@ double timeProportionTest(O &oracle, int m, const vector<int> &type, const vecto
     for (int i=0; i<m; ++i) {
         switch (type[i]) {
             case 0: oracle.setLabel(query[i].first, query[i].second); break;
-            case 1: oracle.distanceToLabel(query[i].first, query[i].second); break;
+            case 1: oracle.distanceBetweenLabels(query[i].first, query[i].second); break;
         }
     }
     return stopTime();
@@ -36,15 +36,19 @@ double timeProportionTest(O &oracle, int m, const vector<int> &type, const vecto
 
 void performVertexToLabelProportionTest(int n, const vector< pair<int, int> > &edges, const vector<W> &weights) {
 
+    const int K = 10;
     const int T = 20;
-    const int M = 10000;
+    const int M = 100000;
 
     vector<int> labels(n);
     for (int i=0; i<n; ++i) labels[i] = rand() % n;
+//    for (int i=0; i<n; ++i) labels[i] = i / K;
+//    vector<int> labelsCopy(labels);
+//    int last = 0;
 
     fprintf(stderr, "Constructing...\n");
     fflush(stderr);
-//    OracleNaive oraclen(n, edges, weights, labels);
+    OracleNaive oraclen(n, edges, weights, labels);
     fprintf(stderr, "Naive - done\n");
     fflush(stderr);
     OracleGeneral3Approx oracle3(n, edges, weights, labels);
@@ -75,14 +79,29 @@ void performVertexToLabelProportionTest(int n, const vector< pair<int, int> > &e
             type[i] = typeCycle[tc++];
             if (tc == T) tc = 0;
 
+
             switch (type[i]) {
                 case 0: query[i] = make_pair(rand()%n, rand()%n); break;
                 case 1: query[i] = make_pair(rand()%n, rand()%n); break;
             }
+/*
+            int v;
+            switch (type[i]) {
+                case 0: 
+                    v = rand()%n;
+                    query[i] = make_pair(last, labelsCopy[v]); 
+                    labelsCopy[last] = labelsCopy[v];
+                    last = v;
+                    break;
+                case 1: 
+                    query[i] = make_pair(labelsCopy[rand()%n], labelsCopy[rand()%n]); 
+                    break;
+            }
+*/
         }
 
         printf("%d:%d ", t, T-t);
-//        printf("%.8f ", timeProportionTest(oraclen, M, type, query)); 
+        printf("%.8f ", timeProportionTest(oraclen, M, type, query)); 
         printf("%.8f ", timeProportionTest(oracle3, M, type, query)); 
 //        printf("%.8f ", timeProportionTest(oracle5q, M, type, query)); 
 //        printf("%.8f ", timeProportionTest(oracle5u, M, type, query));
@@ -99,7 +118,7 @@ int main() {
     vector< pair< int, int > > updates, queries;
 
 
-    OracleTester::generateGraph(80000, 800000, 200, n, edges, weights);
+    OracleTester::generateGraph(2000, 8000, 200, n, edges, weights);
     //OracleTester::readUnweightedGraphFromInput(n, edges, weights);
 
     fprintf(stderr, "Read!\n");
