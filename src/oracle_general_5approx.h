@@ -19,8 +19,8 @@ private:
 // Methods
     virtual
     void initializeStructures() {
-        labels.resize(g.n);
-        for (int v=0; v<g.n; ++v) {
+        labels.resize(n);
+        for (int v=0; v<n; ++v) {
             int l = vertices[v].label;
             for (auto curr: vertices[v].dist) {
                 W du = curr.first;
@@ -73,10 +73,10 @@ public:
             const vector<W> weights,
             int ro = -1)
     {
-        g = Graph(n, edges, weights);
+        Graph g(n, edges, weights);
         vector<int> labels;
         for (int i=0; i<n; ++i) labels.push_back(i);
-        initializeWithLabels(labels, ro);
+        initializeWithLabels(g, labels, ro);
     }
     
     OracleGeneral5ApproxQuery(
@@ -86,8 +86,8 @@ public:
             vector<int> labels,
             int ro = -1)
     {
-        g = Graph(n, edges, weights);
-        initializeWithLabels(labels, ro);
+        Graph g(n, edges, weights);
+        initializeWithLabels(g, labels, ro);
     }
 
     virtual
@@ -113,12 +113,12 @@ private:
 
 // Methods
     virtual
-    void initializePortals(int pi) {
+    void initializePortals(const Graph& g, int pi) {
         int p = portalNumbers[pi];
         
         typedef pair<W, int> QEl;
         priority_queue< QEl, vector<QEl>, greater<QEl> > queue;
-        vector<W> dist(g.n, infinity);
+        vector<W> dist(n, infinity);
         
         queue.push(make_pair(0, p));
         dist[p] = 0;
@@ -140,15 +140,15 @@ private:
             }
         }
 
-        portals[pi].N_l.resize(g.n);
+        portals[pi].N_l.resize(n);
         swap(portals[pi].D_v, dist);
     }
     
     virtual
-    void initializeDistances(int v) {
+    void initializeDistances(const Graph& g, int v) {
         typedef pair<W, int> QEl;
         priority_queue< QEl, vector<QEl>, greater<QEl> > queue;
-        vector<W> dist(g.n, infinity);
+        vector<W> dist(n, infinity);
 
         queue.push(make_pair(0, v));
         dist[v] = 0;
@@ -204,10 +204,10 @@ public:
             const vector<W> weights,
             int ro = -1)
     {
-        g = Graph(n, edges, weights);
+        Graph g(n, edges, weights);
         vector<int> labels;
         for (int i=0; i<n; ++i) labels.push_back(i);
-        initializeWithLabels(labels, ro);
+        initializeWithLabels(g, labels, ro);
     }
     
     OracleGeneral5ApproxUpdate(
@@ -217,8 +217,8 @@ public:
             vector<int> labels,
             int ro = -1)
     {
-        g = Graph(n, edges, weights);
-        initializeWithLabels(labels, ro);
+        Graph g(n, edges, weights);
+        initializeWithLabels(g, labels, ro);
     }
 
     virtual

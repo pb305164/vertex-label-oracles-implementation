@@ -38,7 +38,7 @@ void performVertexToLabelProportionTest(int n, const vector< pair<int, int> > &e
 
     const int K = 10;
     const int T = 20;
-    const int M = 100000;
+    const int M = 1000;
 
     vector<int> labels(n);
     for (int i=0; i<n; ++i) labels[i] = rand() % n;
@@ -48,10 +48,10 @@ void performVertexToLabelProportionTest(int n, const vector< pair<int, int> > &e
 
     fprintf(stderr, "Constructing...\n");
     fflush(stderr);
-    OracleNaive oraclen(n, edges, weights, labels);
+//    OracleNaive oraclen(n, edges, weights, labels);
     fprintf(stderr, "Naive - done\n");
     fflush(stderr);
-    OracleGeneral3Approx oracle3(n, edges, weights, labels);
+    OracleGeneral3ApproxLight oracle3(n, edges, weights, labels);
     fprintf(stderr, "3 approx - done\n");
     fflush(stderr);
 //    OracleGeneral5ApproxQuery oracle5q(n, edges, weights, labels);
@@ -101,7 +101,7 @@ void performVertexToLabelProportionTest(int n, const vector< pair<int, int> > &e
         }
 
         printf("%d:%d ", t, T-t);
-        printf("%.8f ", timeProportionTest(oraclen, M, type, query)); 
+//        printf("%.8f ", timeProportionTest(oraclen, M, type, query)); 
         printf("%.8f ", timeProportionTest(oracle3, M, type, query)); 
 //        printf("%.8f ", timeProportionTest(oracle5q, M, type, query)); 
 //        printf("%.8f ", timeProportionTest(oracle5u, M, type, query));
@@ -118,7 +118,7 @@ int main() {
     vector< pair< int, int > > updates, queries;
 
 
-    OracleTester::generateGraph(2000, 8000, 200, n, edges, weights);
+    OracleTester::generateGraph(80000, 640000, 200, n, edges, weights);
     //OracleTester::readUnweightedGraphFromInput(n, edges, weights);
 
     fprintf(stderr, "Read!\n");
