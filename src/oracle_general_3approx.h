@@ -27,7 +27,7 @@ private:
         labels.resize(n);
         for (int v=0; v<n; ++v) {
             int l = vertices[v].label;
-            for (auto curr: vertices[v].dist) {
+            for (auto &curr: vertices[v].dist) {
                 W du = curr.first;
                 int u = curr.second;
                 labels[l].S_v[u].insert(make_pair(du, v));

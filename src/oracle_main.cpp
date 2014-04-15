@@ -1,6 +1,7 @@
 #include "oracle_naive.h"
 #include "oracle_general_3approx.h"
 #include "oracle_general_5approx.h"
+#include "full_planar_oracle.h"
 #include "oracle_tester.h"
 
 #include <cstdio>
@@ -36,7 +37,7 @@ double timeProportionTest(O &oracle, int m, const vector<int> &type, const vecto
     
 const int K = 10;
 const int T = 20;
-const int M = 100000;
+const int M = 5000;
 
 template <class O>
 void performVertexToLabelProportionTest(int n, const vector< pair<int, int> > &edges, const vector<W> &weights) {
@@ -100,8 +101,6 @@ void performVertexToLabelProportionTest(int n, const vector< pair<int, int> > &e
 
 void printLabels(int n) {
     for (int t=0; t<=T; ++t) {
-        int a = pow(n, 0.5+(float)(t-T/2)/T);
-        int b = pow(n, 0.5+(float)(T/2-t)/T);
         printf("%.1f ", (float)(t*2-T)/T);
     }
     printf("\n");
@@ -124,19 +123,19 @@ int main() {
     vector< pair< int, int > > updates, queries;
 
 
-    OracleTester::generateGraph(2000, 8000, 200, n, edges, weights);
-    //OracleTester::readUnweightedGraphFromInput(n, edges, weights);
+    //OracleTester::generateGraph(80000, 320000, 200, n, edges, weights);
+    OracleTester::readGraphFromInput(n, edges, weights);
 
     fprintf(stderr, "Read!\n");
     fflush(stderr);
-
+/*
     {
         performVertexToLabelProportionTestAll(n, edges, weights);
     }
-
+*/
 
 // Correctness test
-/*
+
     {
         const int K = 50000;
         int T = 10;
@@ -145,6 +144,7 @@ int main() {
         OracleGeneral5ApproxQuery oracle5q(n, edges, weights, labels);
         OracleGeneral5ApproxUpdate oracle5u(n, edges, weights, labels);
         OracleNaive oraclen(n, edges, weights, labels);
+        FullPlanarOracle oraclep(n, edges, weights, labels, 0.5);
 
         for (int i=0; i<(int)updates.size(); ++i) {
             printf("%d\n", i);
@@ -154,23 +154,26 @@ int main() {
             oracle3.setLabel(update.first, update.second);
             oracle5q.setLabel(update.first, update.second);
             oracle5u.setLabel(update.first, update.second);
+            oraclep.setLabel(update.first, update.second);
 
             for (int t=0; t<T; ++t) {
-            int u = rand()%n;
-            int v = rand()%n;
+                int u = rand()%n;
+                int v = rand()%n;
 
-            auto exact = oraclen.distanceToLabel(u, oraclen.labelOf(v));
-            auto approx3 = oracle3.distanceToLabel(u, oracle3.labelOf(v));
-            auto approx5q = oracle5q.distanceToLabel(u, oracle5q.labelOf(v));
-            auto approx5u = oracle5u.distanceToLabel(u, oracle5u.labelOf(v));
+                auto exact = oraclen.distanceToLabel(u, oraclen.labelOf(v));
+                auto approx3 = oracle3.distanceToLabel(u, oracle3.labelOf(v));
+                auto approx5q = oracle5q.distanceToLabel(u, oracle5q.labelOf(v));
+                auto approx5u = oracle5u.distanceToLabel(u, oracle5u.labelOf(v));
+                auto approxp = oraclep.distanceToLabel(u, oraclep.labelOf(v));
 
-            assert(exact.first <= approx3.first);
-            assert(exact.first <= approx5q.first);
-            assert(exact.first <= approx5u.first);
-            assert(exact.first * 3 >= approx3.first);
-            assert(exact.first * 5 >= approx5q.first);
-            assert(exact.first * 5 >= approx5u.first);
-
+                assert(exact.first <= approx3.first);
+                assert(exact.first <= approx5q.first);
+                assert(exact.first <= approx5u.first);
+                assert(exact.first <= approxp.first);
+                assert(exact.first * 3 >= approx3.first);
+                assert(exact.first * 5 >= approx5q.first);
+                assert(exact.first * 5 >= approx5u.first);
+                assert(exact.first * 1.5 >= approxp.first);
             }
 
             for (int t=0; t<T; ++t) {
@@ -179,13 +182,15 @@ int main() {
 
                 auto exact = oraclen.distanceBetweenLabels(oraclen.labelOf(u), oraclen.labelOf(v));
                 auto approx3 = oracle3.distanceBetweenLabels(oracle3.labelOf(u), oracle3.labelOf(v));
+                auto approxp = oraclep.distanceBetweenLabels(oraclep.labelOf(u), oraclep.labelOf(v));
 
                 assert(exact.first <= approx3.first);
+                assert(exact.first <= approxp.first);
                 assert(exact.first * 3 >= approx3.first);
+                assert(exact.first * 1.5 >= approxp.first);
             }
         }
     }
-*/
 
     // Time test
 /*
