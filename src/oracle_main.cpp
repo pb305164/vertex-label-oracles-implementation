@@ -36,7 +36,7 @@ double timeProportionTest(O &oracle, int m, const vector<int> &type, const vecto
     
 const int K = 10;
 const int T = 20;
-const int M = 100;
+const int M = 100000;
 
 template <class O>
 void performVertexToLabelProportionTest(int n, const vector< pair<int, int> > &edges, const vector<W> &weights) {
@@ -60,19 +60,17 @@ void performVertexToLabelProportionTest(int n, const vector< pair<int, int> > &e
         vector< int > type(M);
         vector< pair<int, int> > query(M);
 
-        vector< int > typeCycle;
-        for (int i=0; i<T; ++i) {
-            if (i < t) {
-                typeCycle.push_back(0);
-            } else {
-                typeCycle.push_back(1);
-            }
-        }
+        int a = pow(n, 0.5+(float)(t-T/2)/T);
+        int b = pow(n, 0.5+(float)(T/2-t)/T);
+        vector<int> typeCycle(a+b);
+        for (int i=0; i<a; ++i) typeCycle[i] = 0;
+        for (int i=a; i<a+b; ++i) typeCycle[i] = 1;
+        random_shuffle(typeCycle.begin(), typeCycle.end());
+
         int tc = 0;
         for (int i=0; i<M; ++i) {
             type[i] = typeCycle[tc++];
-            if (tc == T) tc = 0;
-
+            if (tc == a+b) tc = 0;
 
             switch (type[i]) {
                 case 0: query[i] = make_pair(rand()%n, rand()%n); break;
@@ -100,15 +98,17 @@ void performVertexToLabelProportionTest(int n, const vector< pair<int, int> > &e
     printf("\n");
 }
 
-void printLabels() {
+void printLabels(int n) {
     for (int t=0; t<=T; ++t) {
-        printf("%d:%d ", t, T-t);
+        int a = pow(n, 0.5+(float)(t-T/2)/T);
+        int b = pow(n, 0.5+(float)(T/2-t)/T);
+        printf("%.1f ", (float)(t*2-T)/T);
     }
     printf("\n");
 }
 
 void performVertexToLabelProportionTestAll(int n, const vector< pair<int, int> > &edges, const vector<W> &weights) {
-    printLabels();
+    printLabels(n);
     performVertexToLabelProportionTest<OracleNaive>(n, edges, weights);
     performVertexToLabelProportionTest<OracleGeneral3Approx>(n, edges, weights);
     performVertexToLabelProportionTest<OracleGeneral5ApproxUpdate>(n, edges, weights);
@@ -124,7 +124,7 @@ int main() {
     vector< pair< int, int > > updates, queries;
 
 
-    OracleTester::generateGraph(80000, 640000, 200, n, edges, weights);
+    OracleTester::generateGraph(2000, 8000, 200, n, edges, weights);
     //OracleTester::readUnweightedGraphFromInput(n, edges, weights);
 
     fprintf(stderr, "Read!\n");

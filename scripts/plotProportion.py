@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import pylab
 import sys
 
-plt.xlabel('ratio of update queries to distance queries')
+plt.xlabel('ratio of update queries to distance queries (n^eps)')
 plt.ylabel('time (sec)')
 plt.title('A total time of 100 000 consecutive distance and update queries')
 
@@ -19,7 +19,7 @@ a = [line.split() for line in sys.stdin]
 
 labels = a[0];
 k = (len(labels)-1)/4;
-print(k)
+print(labels);
 for i in range(0, len(labels)):
     if (i % k != 0):
         labels[i] = "";
@@ -27,7 +27,6 @@ for i in range(0, len(labels)):
 plt.gca().set_yscale('log')
 pylab.xticks(range(0, len(labels)), labels)
 
-print(labels);
 # plt.gca().set_xticks(labels)
 
 s = 0
