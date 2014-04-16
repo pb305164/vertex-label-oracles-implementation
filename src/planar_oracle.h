@@ -20,12 +20,6 @@ protected:
     //! Ro parameter specifying size of leafs of recursive subdivision
     int ro;
 
-    struct Vertex {
-        int label;
-        vector< pair<W, int> > portals;
-        vector< pair<W, int> > dist;
-    };
-
     //! Process a planar graph - a leaf of recursive subdivision
     virtual
     void processLeaf(
@@ -81,9 +75,6 @@ protected:
             const vector<int>& parents,
             const vector<bool>& sources
     );
-
-    //! Data associated with vertices
-    vector< Vertex > vertices;
 
 public:
     PlanarOracle() {}

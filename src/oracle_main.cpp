@@ -131,14 +131,14 @@ int main() {
 
     fprintf(stderr, "Read!\n");
     fflush(stderr);
-
+/*
     {
         performVertexToLabelProportionTestAll(n, edges, weights, 2.);
     }
-
+*/
 
 // Correctness test
-/*
+
     {
         const int K = 50000;
         int T = 10;
@@ -185,16 +185,13 @@ int main() {
 
                 auto exact = oraclen.distanceBetweenLabels(oraclen.labelOf(u), oraclen.labelOf(v));
                 auto approx3 = oracle3.distanceBetweenLabels(oracle3.labelOf(u), oracle3.labelOf(v));
-                auto approxp = oraclep.distanceBetweenLabels(oraclep.labelOf(u), oraclep.labelOf(v));
 
                 assert(exact.first <= approx3.first);
-                assert(exact.first <= approxp.first);
                 assert(exact.first * 3 >= approx3.first);
-                assert(exact.first * 1.5 >= approxp.first);
             }
         }
     }
-*/
+
     // Time test
 /*
     {
