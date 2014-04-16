@@ -9,8 +9,8 @@ plt.xlabel('ratio of update queries to distance queries (n^eps)')
 plt.ylabel('time (sec)')
 plt.title('A total time of 7000 consecutive distance and update queries')
 
-symbols = ['ro', 'bs', 'g<', 'y>', 'bx']
-colors = ['r', 'b', 'g', 'y', 'b']
+symbols = ['ro', 'bs', 'g<', 'y>', 'kx']
+colors = ['r', 'b', 'g', 'y', 'k']
 
 plt.grid(True)
 

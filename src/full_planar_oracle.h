@@ -11,8 +11,8 @@ class FullPlanarOracle : public PlanarOracle {
     
     struct Vertex {
         int label;
-        vector< pair<W, int> > portals, rportals;
-        vector< pair<W, int> > dist, rdist;
+        vector< pair<W, int> > portals;
+        vector< pair<W, int> > dist;
     };
     vector< Vertex > vertices;
     
@@ -37,7 +37,6 @@ class FullPlanarOracle : public PlanarOracle {
         for (int v=0; v<(int)pg.vs().size(); ++v) {
             int vv = mapping[v];
             if (vv == -1) continue;
-            if (!source[v]) continue;
             
             getDistances(pg, v, distances);
 
@@ -45,7 +44,6 @@ class FullPlanarOracle : public PlanarOracle {
                 int uu = mapping[u];
                 if (uu == -1) continue;
                 vertices[vv].dist.push_back(make_pair(distances[u], uu));
-                vertices[uu].rdist.push_back(make_pair(distances[u], vv));
             }
         }
     }
@@ -66,10 +64,7 @@ class FullPlanarOracle : public PlanarOracle {
                 int v = mapping[j];
 
                 portals.back().N_l[ vertices[v].label ].insert(make_pair(distances[j], v));
-		vertices[v].rportals.push_back(make_pair(distances[j], portals.size()-1));
-                if (source[j]) {
-                    vertices[v].portals.push_back(make_pair(distances[j], portals.size()-1));
-                }
+		vertices[v].portals.push_back(make_pair(distances[j], portals.size()-1));
             }
         }
     }
@@ -80,15 +75,11 @@ class FullPlanarOracle : public PlanarOracle {
             sort(V.dist.begin(), V.dist.end());
             auto it = unique(V.dist.begin(), V.dist.end());
             V.dist.resize(it - V.dist.begin());
-            
-            sort(V.rdist.begin(), V.rdist.end());
-            auto rit = unique(V.rdist.begin(), V.rdist.end());
-            V.rdist.resize(rit - V.rdist.begin());
         }
 
         for (int v=0; v<(int)vertices.size(); ++v) {
             int l = vertices[v].label;
-            for (auto &curr: vertices[v].rdist) {
+            for (auto &curr: vertices[v].dist) {
                 W du = curr.first;
                 int u = curr.second;
                 labels[l].S_v[u].insert(make_pair(du,v));
@@ -99,11 +90,11 @@ class FullPlanarOracle : public PlanarOracle {
     virtual
     void applyLabel(int v, int l) {
         vertices[v].label = l;
-        for (auto &p: vertices[v].rportals) {
+        for (auto &p: vertices[v].portals) {
             portals[p.second].N_l[l].insert(make_pair(p.first, v));
         }
 
-        for (pair<W, int> &curr: vertices[v].rdist) {
+        for (pair<W, int> &curr: vertices[v].dist) {
             W du = curr.first;
             int u = curr.second;
             labels[l].S_v[u].insert(make_pair(du,v));
@@ -114,11 +105,11 @@ class FullPlanarOracle : public PlanarOracle {
     void purgeLabel(int v) {
         int l = vertices[v].label;
 
-        for (auto &p: vertices[v].rportals) {
+        for (auto &p: vertices[v].portals) {
             portals[p.second].N_l[l].erase(make_pair(p.first, v));
         }
 
-        for (pair<W, int> &curr: vertices[v].rdist) {
+        for (pair<W, int> &curr: vertices[v].dist) {
             W du = curr.first;
             int u = curr.second;
             auto it3 = labels[l].S_v.find(u);
