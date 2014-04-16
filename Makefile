@@ -1,7 +1,7 @@
 ALL= oracle_main
 CXX= g++
-//CXXFLAGS= -std=c++11 -O3 -Wall
-CXXFLAGS= -std=c++11 -ggdb -Wall -pg
+CXXFLAGS= -std=c++11 -O3 -Wall
+//CXXFLAGS= -std=c++11 -ggdb -Wall -pg
 
 all: $(ALL)
 
