@@ -4,11 +4,20 @@
 #include "planar_oracle.h"
 #include "find_union.h"
 
+#include <iostream>
+using namespace std;
+
 class FullPlanarOracle : public PlanarOracle {
+    
+    struct Vertex {
+        int label;
+        vector< pair<W, int> > portals, rportals;
+        vector< pair<W, int> > dist, rdist;
+    };
+    vector< Vertex > vertices;
     
     struct Label {
         unordered_map< int, set< pair<W, int> > > S_v;
-        unordered_map< int, set< pair<W, pair<int, int> > > > P_l; 
     }; 
     vector< Label > labels;
 
@@ -24,19 +33,19 @@ class FullPlanarOracle : public PlanarOracle {
             const vector<int>& mapping,
             const vector<bool>& source) {
   
-        printf("LEAF\n"); 
-        for (auto i: mapping) printf("%d ", i);
-        printf("\n");
-
         vector<W> distances;
         for (int v=0; v<(int)pg.vs().size(); ++v) {
-            getDistances(pg, v, distances);
             int vv = mapping[v];
             if (vv == -1) continue;
+            if (!source[v]) continue;
+            
+            getDistances(pg, v, distances);
+
             for (int u=0; u<(int)pg.vs().size(); ++u) {
                 int uu = mapping[u];
                 if (uu == -1) continue;
                 vertices[vv].dist.push_back(make_pair(distances[u], uu));
+                vertices[uu].rdist.push_back(make_pair(distances[u], vv));
             }
         }
     }
@@ -48,12 +57,6 @@ class FullPlanarOracle : public PlanarOracle {
             const vector<int>& newPortals,
             const vector<bool>& source) {
     
-        printf("PORTALS:\n");
-        for (int p: newPortals) printf("%d ", mapping[p]);
-        printf("\n");
-        for (int v: mapping) printf("%d ", v);
-        printf("\n");
-
         vector<W> distances;
         for (int p: newPortals) {
             getDistances(pg, p, distances);
@@ -63,7 +66,10 @@ class FullPlanarOracle : public PlanarOracle {
                 int v = mapping[j];
 
                 portals.back().N_l[ vertices[v].label ].insert(make_pair(distances[j], v));
-                vertices[v].portals.push_back(make_pair(distances[j], portals.size()-1));
+		vertices[v].rportals.push_back(make_pair(distances[j], portals.size()-1));
+                if (source[j]) {
+                    vertices[v].portals.push_back(make_pair(distances[j], portals.size()-1));
+                }
             }
         }
     }
@@ -74,24 +80,18 @@ class FullPlanarOracle : public PlanarOracle {
             sort(V.dist.begin(), V.dist.end());
             auto it = unique(V.dist.begin(), V.dist.end());
             V.dist.resize(it - V.dist.begin());
+            
+            sort(V.rdist.begin(), V.rdist.end());
+            auto rit = unique(V.rdist.begin(), V.rdist.end());
+            V.rdist.resize(rit - V.rdist.begin());
         }
 
         for (int v=0; v<(int)vertices.size(); ++v) {
             int l = vertices[v].label;
-            for (auto &curr: vertices[v].dist) {
+            for (auto &curr: vertices[v].rdist) {
                 W du = curr.first;
                 int u = curr.second;
                 labels[l].S_v[u].insert(make_pair(du,v));
-            }
-        }
-
-        for (auto &label: labels) {
-            for (auto &S: label.S_v) {
-                int v = S.first;
-                int l2 = vertices[v].label;
-                for (auto &u: S.second) {
-                    label.P_l[l2].insert(make_pair(u.first, make_pair(u.second, v)));
-                }
             }
         }
     }
@@ -99,18 +99,14 @@ class FullPlanarOracle : public PlanarOracle {
     virtual
     void applyLabel(int v, int l) {
         vertices[v].label = l;
-        for (auto &p: vertices[v].portals) {
+        for (auto &p: vertices[v].rportals) {
             portals[p.second].N_l[l].insert(make_pair(p.first, v));
         }
 
-        for (pair<W, int> &curr: vertices[v].dist) {
+        for (pair<W, int> &curr: vertices[v].rdist) {
             W du = curr.first;
             int u = curr.second;
-            int ll = vertices[u].label;
-
             labels[l].S_v[u].insert(make_pair(du,v));
-            labels[l].P_l[ll].insert(make_pair(du, make_pair(v, u)));
-            if (v != u) labels[ll].P_l[l].insert(make_pair(du, make_pair(u, v)));
         }
     }
 
@@ -118,29 +114,13 @@ class FullPlanarOracle : public PlanarOracle {
     void purgeLabel(int v) {
         int l = vertices[v].label;
 
-        for (auto &p: vertices[v].portals) {
+        for (auto &p: vertices[v].rportals) {
             portals[p.second].N_l[l].erase(make_pair(p.first, v));
         }
 
-        for (pair<W, int> &curr: vertices[v].dist) {
+        for (pair<W, int> &curr: vertices[v].rdist) {
             W du = curr.first;
             int u = curr.second;
-            int ll = vertices[u].label;
-
-            auto it1 = labels[ll].P_l.find(l);
-            it1->second.erase(make_pair(du, make_pair(u, v)));
-            if (it1->second.empty()) {
-                labels[ll].P_l.erase(it1);
-            }
-
-            if (v != u) {
-                auto it2 = labels[l].P_l.find(ll);
-                it2->second.erase(make_pair(du, make_pair(v, u)));
-                if (it2->second.empty()) {
-                    labels[l].P_l.erase(it2);
-                }
-            }
-
             auto it3 = labels[l].S_v.find(u);
             it3->second.erase(make_pair(du, v));
             if (it3->second.empty()) {
@@ -162,13 +142,12 @@ public:
         initialize(n, edges, weights, eps);
         initializeStructures();
 
+	long long sum = 0;
         for (auto &v: vertices) {
-            printf("vertex\n");
-            for (auto curr: v.dist) {
-                printf("(%f %d) ", curr.first, curr.second);
-            }
-            printf("\n");
+		sum += (int)v.portals.size();
         }
+	cerr << sum << " / " << (int)portals.size() << " = " << (float)sum/portals.size() << endl;
+	cerr << sum << " / " << (int)vertices.size() << " = " << (float)sum/vertices.size() << endl;
     }
 
     virtual
@@ -192,58 +171,6 @@ public:
         }
         auto it = labels[l].S_v.find(v);
         if (it != labels[l].S_v.end()) {
-            result = min(result, *it->second.begin());
-        }
-        return result;
-    }
-
-    virtual
-    pair<W, pair<int, int> > distanceBetweenLabels(int l1, int l2) {
-        pair<W, pair<int, int> > result(infinity, make_pair(-1, -1));
-/*
-        for (auto &V: vertices) {
-            printf("%d ", V.label);
-        }
-        printf("\n");
-
-        for (auto &L: labels) {
-            printf("Lablel\n");
-            for (auto &S: L.S_v) {
-                printf("S %d: ", S.first);
-                for (auto curr: S.second) {
-                    printf("(%.1f %d) ", curr.first, curr.second);
-                }
-                printf("\n");
-            }
-            for (auto &P: L.P_l) {
-                printf("P %d: ", P.first);
-                for (auto curr: P.second) {
-                    printf("(%.1f (%d,%d)) ", curr.first, curr.second.first, curr.second.second);
-                }
-                printf("\n");
-            }
-        }
-
-        for (auto &P: portals) {
-            printf("Portal\n");
-            for (auto &L: P.N_l) {
-                printf("N %d: ", L.first);
-                for (auto curr: L.second) {
-                    printf("(%.1f %d) ", curr.first, curr.second);
-                }
-                printf("\n");
-            }
-        }
-*/
-        for (auto &p: portals) {
-            if (p.N_l[l1].empty()) continue;
-            if (p.N_l[l2].empty()) continue;
-            auto v = *p.N_l[l1].begin();
-            auto u = *p.N_l[l2].begin();
-            result = min(result, make_pair(v.first + u.first, make_pair(v.second, u.second)));
-        }
-        auto it = labels[l1].P_l.find(l2);
-        if (it != labels[l1].P_l.end()) {
             result = min(result, *it->second.begin());
         }
         return result;
