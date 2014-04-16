@@ -27,8 +27,6 @@ for i in range(0, len(labels)):
 plt.gca().set_yscale('log')
 pylab.xticks(range(0, len(labels)), labels)
 
-# plt.gca().set_xticks(labels)
-
 s = 0
 for v in a[1:]:
     plt.plot(v, symbols[s])

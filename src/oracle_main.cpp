@@ -48,8 +48,9 @@ void performVertexToLabelProportionTest(int n, const vector< pair<int, int> > &e
     srand(-1);
 
     vector<int> labels(n);
-//    for (int i=0; i<n; ++i) labels[i] = rand() % n;
-
+// random
+    //    for (int i=0; i<n; ++i) labels[i] = rand() % n;
+// groups of K
     for (int i=0; i<n; ++i) labels[i] = i / K;
     vector<int> labelsCopy(labels);
     int last = 0;
@@ -75,12 +76,14 @@ void performVertexToLabelProportionTest(int n, const vector< pair<int, int> > &e
         for (int i=0; i<M; ++i) {
             type[i] = typeCycle[tc++];
             if (tc == a+b) tc = 0;
+// random
 /*
             switch (type[i]) {
                 case 0: query[i] = make_pair(rand()%n, rand()%n); break;
                 case 1: query[i] = make_pair(rand()%n, rand()%n); break;
             }
 */
+// groups of K
             int v;
             switch (type[i]) {
                 case 0: 
@@ -116,24 +119,28 @@ void performLabelToLabelGroupTest(int n, const vector< pair<int, int> > &edges, 
     int gc = 0;
 
     vector<int> labels(n);
+    vector< vector<int> > labelCandidates(n);
+    
+    vector< vector<int> > groups;
+    OracleTester::readGroupsFromFile(filename, groups);
+    fprintf(stderr, "groups! %d\n", (int)groups.size());
+
+    gc = 0;
+    for (vector<int> &g: groups) {
+        for (int v: g) {
+            labelCandidates[v].push_back(gc);       
+        }
+        ++gc;
+    }
+    for (vector<int> &c: labelCandidates) {
+        if (c.empty()) {
+            groups.push_back(vector<int>(1, gc));
+            c.push_back(gc++);
+        }
+    }
+
+// static
     {
-        vector< vector<int> > labelCandidates(n);
-        
-        vector< vector<int> > groups;
-        OracleTester::readGroupsFromFile(filename, groups);
-        fprintf(stderr, "groups! %d\n", (int)groups.size());
-
-        gc = 0;
-        for (vector<int> &g: groups) {
-            for (int v: g) {
-                labelCandidates[v].push_back(gc);       
-            }
-            ++gc;
-        }
-        for (vector<int> &c: labelCandidates) {
-            if (c.empty()) c.push_back(gc++);
-        }
-
         gc = 0;
         unordered_map<int, int> gMap;
         for (int v=0; v<n; ++v) {
@@ -143,6 +150,20 @@ void performLabelToLabelGroupTest(int n, const vector< pair<int, int> > &edges, 
         }
     }
 
+// dynamic 
+/*
+    {
+        assert(gc <= n);
+        vector<int> order(gc);
+        for (int i=0; i<gc; ++i) order[i] = i;
+        random_shuffle(order.begin(), order.end());
+        for (int o: order) {
+            for (int v: labelCandidates[o]) {
+                labels[v] = o;
+            }
+        }
+    }
+*/
     vector< pair<int, int> > query(M);
     for (auto &q: query) {
         q = make_pair(rand() % gc, rand() % gc);
@@ -165,7 +186,24 @@ void performLabelToLabelGroupTest(int n, const vector< pair<int, int> > &edges, 
         fprintf(stderr, "tt: %d %d\n", t, checkTime[t]);
 
         while (q != checkTime[t]) {
+// static
             oracle.distanceBetweenLabels(query[q].first, query[q].second);
+// dynamic 
+/*
+            int g1 = query[q].first;
+            for (int v: groups[g1]) {
+                if (oracle.labelOf(v) != g1) {
+                    oracle.setLabel(v, g1);
+                }
+            }
+            int g2 = query[q].second;
+            for (int v: groups[g2]) {
+                if (oracle.labelOf(v) != g2) {
+                    oracle.setLabel(v, g2);
+                }
+            }
+            oracle.distanceBetweenLabels(g1, g2);
+*/
             ++q;
         }
         printf("%.12f ", stopTime());
