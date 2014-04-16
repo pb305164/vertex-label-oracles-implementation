@@ -7,12 +7,18 @@
 #include <vector>
 #include <utility>
 #include <set>
+#include <string>
+#include <fstream>
+#include <sstream>
 
 using std::pair;
 using std::vector;
 using std::set;
 using std::make_pair;
 using std::swap;
+using std::string;
+using std::ifstream;
+using std::istringstream;
 
 class OracleTester {
 public:
@@ -37,6 +43,21 @@ public:
             n = max(n, max(u, v));
         }
     }
+
+    static
+    void readGroupsFromFile(string filename, vector< vector<int> > &groups, int minimal = 0) {
+        ifstream file(filename);
+        string line;
+        while (getline(file, line)) {
+            istringstream iline(line);
+
+            groups.push_back(vector<int>());
+            int e;
+            while (cin >> e) {
+                groups.back().push_back(e - minimal);
+            }
+        }
+    } 
 
     static
     void generateGraph(int nn, int m, int w, int& n, vector< pair<int, int> > &edges, vector< W > &weights) {

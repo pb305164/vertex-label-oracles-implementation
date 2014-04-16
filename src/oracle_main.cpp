@@ -102,20 +102,97 @@ void performVertexToLabelProportionTest(int n, const vector< pair<int, int> > &e
     printf("\n");
 }
 
-void printLabels(int n, float frac = 1.) {
+void printProportionLabels(int n, float frac = 1.) {
     for (int t=0; t<=T; ++t) {
         printf("%.1f ", (float)(t*2-T)/T/frac);
     }
     printf("\n");
 }
 
+template <class O>
+void performLabelToLabelGroupTest(int n, const vector< pair<int, int> > &edges, const vector<W> &weights, string filename) {
+
+    srand(-1);
+    int gc = 0;
+
+    vector<int> labels(n);
+    {
+        vector< vector<int> > labelCandidates(n);
+        
+        vector< vector<int> > groups;
+        OracleTester::readGroupsFromFile(filename, groups);
+        fprintf(stderr, "groups! %d\n", (int)groups.size());
+
+        gc = 0;
+        for (vector<int> &g: groups) {
+            for (int v: g) {
+                labelCandidates[v].push_back(gc);       
+            }
+            ++gc;
+        }
+        for (vector<int> &c: labelCandidates) {
+            if (c.empty()) c.push_back(gc++);
+        }
+
+        gc = 0;
+        unordered_map<int, int> gMap;
+        for (int v=0; v<n; ++v) {
+            int l = labelCandidates[v][ rand() % labelCandidates[v].size()];
+            if (gMap.find(l) == gMap.end()) gMap[l] = gc++;
+            labels[v] = gMap[l];
+        }
+    }
+
+    vector< pair<int, int> > query(M);
+    for (auto &q: query) {
+        q = make_pair(rand() % gc, rand() % gc);
+    }
+    vector<int> checkTime(T+1);
+    for (int i=0; i<(int)checkTime.size(); ++i) {
+        checkTime[i] = M / T * i;
+    }
+
+    startTime();
+    
+    fprintf(stderr, "Constructing...\n");
+    fflush(stderr);
+    O oracle(n, edges, weights, labels);
+    fprintf(stderr, " - done\n");
+
+    
+    int q = 0;
+    for (int t=0; t<=T; ++t) {
+        fprintf(stderr, "tt: %d %d\n", t, checkTime[t]);
+
+        while (q != checkTime[t]) {
+            oracle.distanceBetweenLabels(query[q].first, query[q].second);
+            ++q;
+        }
+        printf("%.12f ", stopTime());
+    }
+    printf("\n");
+}
+
+void printGroupLabels(int n) {
+    for (int t=0; t<T; ++t) {
+        printf("%d ", M / (T-1) * t);
+    }
+    printf("\n");
+}
+
 void performVertexToLabelProportionTestAll(int n, const vector< pair<int, int> > &edges, const vector<W> &weights, float frac = 1.) {
-    printLabels(n, frac);
-    performVertexToLabelProportionTest<FullPlanarOracle>(n, edges, weights, 2.);
+    printProportionLabels(n, frac);
     performVertexToLabelProportionTest<OracleNaive>(n, edges, weights, frac);
     performVertexToLabelProportionTest<OracleGeneral3Approx>(n, edges, weights, frac);
     performVertexToLabelProportionTest<OracleGeneral5ApproxUpdate>(n, edges, weights, frac);
     performVertexToLabelProportionTest<OracleGeneral5ApproxQuery>(n, edges, weights, frac);
+    performVertexToLabelProportionTest<FullPlanarOracle>(n, edges, weights, frac);
+}
+
+void performLabelToLabelGroupTestAll(int n, const vector< pair<int, int> > &edges, const vector<W> &weights, string filename) {
+    printGroupLabels(n);
+    performLabelToLabelGroupTest<OracleNaive>(n, edges, weights, filename);
+    performLabelToLabelGroupTest<OracleGeneral3Approx>(n, edges, weights, filename);
 }
 
 int main() {
@@ -127,10 +204,14 @@ int main() {
     vector< pair< int, int > > updates, queries;
 
 //    OracleTester::generateGraph(2000, 8000, 200, n, edges, weights);
-    OracleTester::readGraphFromInput(n, edges, weights);
+    OracleTester::readUnweightedGraphFromInput(n, edges, weights);
 
-    fprintf(stderr, "Read!\n");
+    fprintf(stderr, "Read %d %d!\n", n, (int)edges.size());
     fflush(stderr);
+    {
+        performLabelToLabelGroupTestAll(n, edges, weights, "../dblp-g.in");
+    }
+
 /*
     {
         performVertexToLabelProportionTestAll(n, edges, weights, 2.);
@@ -138,16 +219,20 @@ int main() {
 */
 
 // Correctness test
-
+/*
     {
-        const int K = 50000;
+        const int K = 500;
         int T = 10;
         OracleTester::selectQueries(n, 4, K, labels, updates);
+
         OracleGeneral3Approx oracle3(n, edges, weights, labels);
         OracleGeneral5ApproxQuery oracle5q(n, edges, weights, labels);
         OracleGeneral5ApproxUpdate oracle5u(n, edges, weights, labels);
         OracleNaive oraclen(n, edges, weights, labels);
         FullPlanarOracle oraclep(n, edges, weights, labels, 0.5);
+	
+	double oracle3Err = 0, oracle5qErr = 0, oracle5uErr = 0, oraclepErr = 0;
+	double oracle3LLErr = 0;
 
         for (int i=0; i<(int)updates.size(); ++i) {
             printf("%d\n", i);
@@ -177,6 +262,18 @@ int main() {
                 assert(exact.first * 5 >= approx5q.first);
                 assert(exact.first * 5 >= approx5u.first);
                 assert(exact.first * 1.5 >= approxp.first);
+                
+		if (exact.first == 0) {
+			oracle3Err += 1;
+			oracle5qErr += 1;
+			oracle5uErr += 1;
+			oraclepErr += 1;
+		} else {
+			oracle3Err += approx3.first / exact.first;
+			oracle5qErr += approx5q.first / exact.first;
+			oracle5uErr += approx5u.first / exact.first;
+			oraclepErr += approxp.first / exact.first;
+		}
             }
 
             for (int t=0; t<T; ++t) {
@@ -188,10 +285,23 @@ int main() {
 
                 assert(exact.first <= approx3.first);
                 assert(exact.first * 3 >= approx3.first);
+
+		if(exact.first == 0) {
+			oracle3LLErr += 1;
+		} else {
+			oracle3LLErr += approx3.first / exact.first;
+		}
             }
         }
-    }
 
+	cout << "approx 3 " << oracle3Err / (K*T) << endl;
+	cout << "approx u 5 " << oracle5uErr / (K*T) << endl;
+	cout << "approx q 5 " << oracle5qErr / (K*T) << endl;
+	cout << "approx p 1.5 " << oraclepErr / (K*T) << endl;
+	
+	cout << "approx 3 l-l " << oracle3LLErr / (K*T) << endl;
+    }
+*/
     // Time test
 /*
     {
