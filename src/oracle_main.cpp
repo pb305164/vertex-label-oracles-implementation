@@ -40,7 +40,7 @@ double timeProportionTest(O &oracle, int m, const vector<int> &type, const vecto
     
 const int K = 10;
 const int T = 20;
-const int M = 10000;
+const int M = 5000;
 
 template <class O>
 void performVertexToLabelProportionTest(int n, const vector< pair<int, int> > &edges, const vector<W> &weights, float frac = 1.) {
@@ -140,6 +140,7 @@ void performLabelToLabelGroupTest(int n, const vector< pair<int, int> > &edges, 
     }
 
 // static
+/*
     {
         gc = 0;
         unordered_map<int, int> gMap;
@@ -149,10 +150,11 @@ void performLabelToLabelGroupTest(int n, const vector< pair<int, int> > &edges, 
             labels[v] = gMap[l];
         }
     }
-
+*/
 // dynamic 
-/*
+
     {
+        fprintf(stderr, "%d <= %d ?\n", gc, n);
         assert(gc <= n);
         vector<int> order(gc);
         for (int i=0; i<gc; ++i) order[i] = i;
@@ -163,7 +165,7 @@ void performLabelToLabelGroupTest(int n, const vector< pair<int, int> > &edges, 
             }
         }
     }
-*/
+
     vector< pair<int, int> > query(M);
     for (auto &q: query) {
         q = make_pair(rand() % gc, rand() % gc);
@@ -187,9 +189,9 @@ void performLabelToLabelGroupTest(int n, const vector< pair<int, int> > &edges, 
 
         while (q != checkTime[t]) {
 // static
-            oracle.distanceBetweenLabels(query[q].first, query[q].second);
+//            oracle.distanceBetweenLabels(query[q].first, query[q].second);
 // dynamic 
-/*
+
             int g1 = query[q].first;
             for (int v: groups[g1]) {
                 if (oracle.labelOf(v) != g1) {
@@ -203,7 +205,7 @@ void performLabelToLabelGroupTest(int n, const vector< pair<int, int> > &edges, 
                 }
             }
             oracle.distanceBetweenLabels(g1, g2);
-*/
+
             ++q;
         }
         printf("%.12f ", stopTime());
@@ -212,8 +214,8 @@ void performLabelToLabelGroupTest(int n, const vector< pair<int, int> > &edges, 
 }
 
 void printGroupLabels(int n) {
-    for (int t=0; t<T; ++t) {
-        printf("%d ", M / (T-1) * t);
+    for (int t=0; t<=T; ++t) {
+        printf("%d ", M / T * t);
     }
     printf("\n");
 }
@@ -229,7 +231,7 @@ void performVertexToLabelProportionTestAll(int n, const vector< pair<int, int> >
 
 void performLabelToLabelGroupTestAll(int n, const vector< pair<int, int> > &edges, const vector<W> &weights, string filename) {
     printGroupLabels(n);
-    performLabelToLabelGroupTest<OracleNaive>(n, edges, weights, filename);
+    performLabelToLabelGroupTest<OracleNaiveSet>(n, edges, weights, filename);
     performLabelToLabelGroupTest<OracleGeneral3Approx>(n, edges, weights, filename);
 }
 

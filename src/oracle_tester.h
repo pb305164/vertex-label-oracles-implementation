@@ -53,7 +53,7 @@ public:
 
             groups.push_back(vector<int>());
             int e;
-            while (cin >> e) {
+            while (iline >> e) {
                 groups.back().push_back(e - minimal);
             }
         }
