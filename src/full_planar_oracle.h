@@ -4,6 +4,9 @@
 #include "planar_oracle.h"
 #include "find_union.h"
 
+#include <iostream>
+using namespace std;
+
 class FullPlanarOracle : public PlanarOracle {
     
     struct Label {
@@ -24,10 +27,6 @@ class FullPlanarOracle : public PlanarOracle {
             const vector<int>& mapping,
             const vector<bool>& source) {
   
-        printf("LEAF\n"); 
-        for (auto i: mapping) printf("%d ", i);
-        printf("\n");
-
         vector<W> distances;
         for (int v=0; v<(int)pg.vs().size(); ++v) {
             getDistances(pg, v, distances);
@@ -48,12 +47,6 @@ class FullPlanarOracle : public PlanarOracle {
             const vector<int>& newPortals,
             const vector<bool>& source) {
     
-        printf("PORTALS:\n");
-        for (int p: newPortals) printf("%d ", mapping[p]);
-        printf("\n");
-        for (int v: mapping) printf("%d ", v);
-        printf("\n");
-
         vector<W> distances;
         for (int p: newPortals) {
             getDistances(pg, p, distances);
@@ -162,13 +155,12 @@ public:
         initialize(n, edges, weights, eps);
         initializeStructures();
 
+	long long sum = 0;
         for (auto &v: vertices) {
-            printf("vertex\n");
-            for (auto curr: v.dist) {
-                printf("(%f %d) ", curr.first, curr.second);
-            }
-            printf("\n");
+		sum += (int)v.portals.size();
         }
+	cerr << sum << " / " << (int)portals.size() << " = " << (float)sum/portals.size() << endl;
+	cerr << sum << " / " << (int)vertices.size() << " = " << (float)sum/vertices.size() << endl;
     }
 
     virtual

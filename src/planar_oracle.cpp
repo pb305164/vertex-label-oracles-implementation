@@ -3,6 +3,8 @@
 
 #include <algorithm>
 #include <queue>
+#include <iostream>
+using namespace std;
 using std::min;
 using std::max;
 using std::sort;
@@ -27,6 +29,9 @@ PlanarOracle::initialize(
     W alpha = stretch.first;
     
     while (alpha <= stretch.second) {
+	
+	cerr << alpha << endl;
+
         vector< vector<int> > tmpParents, tmpMappings;
         vector< vector<bool> > tmpSources;
         vector< PlanarGraph > tmpSubgs;
