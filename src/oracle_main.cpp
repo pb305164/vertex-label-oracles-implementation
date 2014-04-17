@@ -40,7 +40,7 @@ double timeProportionTest(O &oracle, int m, const vector<int> &type, const vecto
     
 const int K = 10;
 const int T = 20;
-const int M = 5000;
+const int M = 10000;
 
 template <class O>
 void performVertexToLabelProportionTest(int n, const vector< pair<int, int> > &edges, const vector<W> &weights, float frac = 1.) {
@@ -227,6 +227,7 @@ void performVertexToLabelProportionTestAll(int n, const vector< pair<int, int> >
     performVertexToLabelProportionTest<OracleGeneral5ApproxUpdate>(n, edges, weights, frac);
     performVertexToLabelProportionTest<OracleGeneral5ApproxQuery>(n, edges, weights, frac);
     performVertexToLabelProportionTest<FullPlanarOracle>(n, edges, weights, frac);
+    performVertexToLabelProportionTest<FullPlanarOracle2>(n, edges, weights, frac);
 }
 
 void performLabelToLabelGroupTestAll(int n, const vector< pair<int, int> > &edges, const vector<W> &weights, string filename) {
@@ -253,14 +254,14 @@ int main() {
         performLabelToLabelGroupTestAll(n, edges, weights, "../dblp-g.in");
     }
 */
-/*
+
     {
         performVertexToLabelProportionTestAll(n, edges, weights, 2.);
     }
-*/
+
 
 // Correctness test
-
+/*
     {
         const int K = 500;
         int T = 10;
@@ -342,7 +343,7 @@ int main() {
 	
 	cout << "approx 3 l-l " << oracle3LLErr / (K*T) << endl;
     }
-
+*/
     // Time test
 /*
     {

@@ -44,6 +44,7 @@ class FullPlanarOracle : public PlanarOracle {
             for (int u=0; u<(int)pg.vs().size(); ++u) {
                 int uu = mapping[u];
                 if (uu == -1) continue;
+                if (distances[u] == infinity) continue;
                 vertices[uu].rdist.push_back(make_pair(distances[u], vv));
             }
         }
@@ -61,8 +62,9 @@ class FullPlanarOracle : public PlanarOracle {
             getDistances(pg, p, distances);
             portals.push_back(Portal());
             for (int j=0; j<(int)mapping.size(); ++j) {
-                if (mapping[j] == -1) continue;
                 int v = mapping[j];
+                if (v == -1) continue;
+                if (distances[j] == infinity) continue;
 
                 portals.back().N_l[ vertices[v].label ].insert(make_pair(distances[j], v));
 		vertices[v].rportals.push_back(make_pair(distances[j], portals.size()-1));
@@ -170,6 +172,16 @@ public:
         }
         return result;
     }
+};
+
+class FullPlanarOracle2 : public FullPlanarOracle {
+public:
+    FullPlanarOracle2(
+            int n,
+            const vector< pair< int, int > >& edges, 
+            const vector< W >& weights,
+            const vector< int > llabels,
+            W eps = 1.) : FullPlanarOracle(n, edges, weights, llabels, eps) {}
 };
 
 #endif
