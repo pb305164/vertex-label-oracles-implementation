@@ -7,6 +7,8 @@
 #include <cstdio>
 #include <cassert>
 #include <chrono>
+#include <string>
+using std::string;
 
 using namespace std::chrono;
 
@@ -32,7 +34,20 @@ double timeProportionTest(O &oracle, int m, const vector<int> &type, const vecto
     for (int i=0; i<m; ++i) {
         switch (type[i]) {
             case 0: oracle.setLabel(query[i].first, query[i].second); break;
-            case 1: oracle.distanceToLabel(query[i].first, query[i].second); break;
+            case 1: oracle.distanceToLabel(query[i].first, oracle.labelOf(query[i].second)); break;
+        }
+    }
+    return stopTime();
+}
+
+template <class O>
+inline
+double timeLabelProportionTest(O &oracle, int m, const vector<int> &type, const vector< pair<int, int> > &query) {
+    startTime();
+    for (int i=0; i<m; ++i) {
+        switch (type[i]) {
+            case 0: oracle.setLabel(query[i].first, query[i].second); break;
+            case 1: oracle.distanceBetweenLabels(oracle.labelOf(query[i].first), oracle.labelOf(query[i].second)); break;
         }
     }
     return stopTime();
@@ -40,7 +55,7 @@ double timeProportionTest(O &oracle, int m, const vector<int> &type, const vecto
     
 const int K = 100;
 const int T = 20;
-const int M = 10000;
+const int M = 2000;
 
 template <class O>
 void performVertexToLabelProportionTest(int n, const vector< pair<int, int> > &edges, const vector<W> &weights, float frac = 1.) {
@@ -49,12 +64,13 @@ void performVertexToLabelProportionTest(int n, const vector< pair<int, int> > &e
 
     vector<int> labels(n);
 // random
-    //    for (int i=0; i<n; ++i) labels[i] = rand() % n;
+    for (int i=0; i<n; ++i) labels[i] = rand() % n;
 // groups of K
+/*
     for (int i=0; i<n; ++i) labels[i] = i / K;
     vector<int> labelsCopy(labels);
     int last = 0;
-
+*/
     fprintf(stderr, "Constructing...\n");
     fflush(stderr);
     O oracle(n, edges, weights, labels);
@@ -77,12 +93,12 @@ void performVertexToLabelProportionTest(int n, const vector< pair<int, int> > &e
             type[i] = typeCycle[tc++];
             if (tc == a+b) tc = 0;
 // random
-/*
+
             switch (type[i]) {
                 case 0: query[i] = make_pair(rand()%n, rand()%n); break;
                 case 1: query[i] = make_pair(rand()%n, rand()%n); break;
             }
-*/
+/*
 // groups of K
             int v;
             switch (type[i]) {
@@ -96,7 +112,7 @@ void performVertexToLabelProportionTest(int n, const vector< pair<int, int> > &e
                     query[i] = make_pair(rand()%n, labelsCopy[rand()%n]); 
                     break;
             }
-
+*/
         }
 
         printf("%.12f ", timeProportionTest(oracle, M, type, query)); 
@@ -105,16 +121,73 @@ void performVertexToLabelProportionTest(int n, const vector< pair<int, int> > &e
     printf("\n");
 }
 
-void printProportionLabels(int n, float frac = 1.) {
+template <class O>
+void performLabelToLabelProportionTest(int n, const vector< pair<int, int> > &edges, const vector<W> &weights, float frac = 1.) {
+
+    srand(-1);
+
+    vector<int> labels(n);
+// random
+    for (int i=0; i<n; ++i) labels[i] = rand() % n;
+// groups of K
+/*
+    for (int i=0; i<n; ++i) labels[i] = i / K;
+    vector<int> labelsCopy(labels);
+    int last = 0;
+*/
+    fprintf(stderr, "Constructing...\n");
+    fflush(stderr);
+    O oracle(n, edges, weights, labels);
+    fprintf(stderr, " - done\n");
+
     for (int t=0; t<=T; ++t) {
-        printf("%.1f ", (float)(t*2-T)/T/frac);
+        fprintf(stderr, "t: %d\n", t);
+        vector< int > type(M);
+        vector< pair<int, int> > query(M);
+
+        int a = pow(n, 0.5+(float)(t-T/2)/T/frac);
+        int b = pow(n, 0.5+(float)(T/2-t)/T/frac);
+        vector<int> typeCycle(a+b);
+        for (int i=0; i<a; ++i) typeCycle[i] = 0;
+        for (int i=a; i<a+b; ++i) typeCycle[i] = 1;
+        random_shuffle(typeCycle.begin(), typeCycle.end());
+
+        int tc = 0;
+        for (int i=0; i<M; ++i) {
+            type[i] = typeCycle[tc++];
+            if (tc == a+b) tc = 0;
+// random
+
+            switch (type[i]) {
+                case 0: query[i] = make_pair(rand()%n, rand()%n); break;
+                case 1: query[i] = make_pair(rand()%n, rand()%n); break;
+            }
+/*
+// groups of K
+            int v;
+            switch (type[i]) {
+                case 0: 
+                    v = rand()%n;
+                    query[i] = make_pair(last, labelsCopy[v]); 
+                    labelsCopy[last] = labelsCopy[v];
+                    last = v;
+                    break;
+                case 1: 
+                    query[i] = make_pair(rand()%n, labelsCopy[rand()%n]); 
+                    break;
+            }
+*/
+        }
+
+        printf("%.12f ", timeLabelProportionTest(oracle, M, type, query)); 
     }
+
     printf("\n");
 }
 
 template <class O>
-void performLabelToLabelGroupTest(int n, const vector< pair<int, int> > &edges, const vector<W> &weights, string filename) {
-
+void performVertexToLabelGroupTest(int n, const vector< pair<int, int > > &edges, const vector<W> &weights, float frac, string filename) {
+    
     srand(-1);
     int gc = 0;
 
@@ -138,83 +211,118 @@ void performLabelToLabelGroupTest(int n, const vector< pair<int, int> > &edges, 
             c.push_back(gc++);
         }
     }
-
-// static
-/*
-    {
-        gc = 0;
-        unordered_map<int, int> gMap;
-        for (int v=0; v<n; ++v) {
-            int l = labelCandidates[v][ rand() % labelCandidates[v].size()];
-            if (gMap.find(l) == gMap.end()) gMap[l] = gc++;
-            labels[v] = gMap[l];
-        }
+    
+    for (int v=0; v<n; ++v) {
+        labels[v] = labelCandidates[v][ rand() % labelCandidates[v].size()];
     }
-*/
-// dynamic 
-
-    {
-        fprintf(stderr, "%d <= %d ?\n", gc, n);
-        assert(gc <= n);
-        vector<int> order(gc);
-        for (int i=0; i<gc; ++i) order[i] = i;
-        random_shuffle(order.begin(), order.end());
-        for (int o: order) {
-            for (int v: labelCandidates[o]) {
-                labels[v] = o;
-            }
-        }
-    }
-
-    vector< pair<int, int> > query(M);
-    for (auto &q: query) {
-        q = make_pair(rand() % gc, rand() % gc);
-    }
-    vector<int> checkTime(T+1);
-    for (int i=0; i<(int)checkTime.size(); ++i) {
-        checkTime[i] = M / T * i;
-    }
-
-    startTime();
     
     fprintf(stderr, "Constructing...\n");
     fflush(stderr);
     O oracle(n, edges, weights, labels);
     fprintf(stderr, " - done\n");
     
-    int q = 0;
     for (int t=0; t<=T; ++t) {
-        fprintf(stderr, "tt: %d %d\n", t, checkTime[t]);
+        fprintf(stderr, "t: %d\n", t);
+        vector< int > type(M);
+        vector< pair<int, int> > query(M);
 
-        while (q != checkTime[t]) {
-// static
-//            oracle.distanceBetweenLabels(query[q].first, query[q].second);
-// dynamic 
+        int a = pow(n, 0.5+(float)(t-T/2)/T/frac);
+        int b = pow(n, 0.5+(float)(T/2-t)/T/frac);
+        vector<int> typeCycle(a+b);
+        for (int i=0; i<a; ++i) typeCycle[i] = 0;
+        for (int i=a; i<a+b; ++i) typeCycle[i] = 1;
+        random_shuffle(typeCycle.begin(), typeCycle.end());
 
-            int g1 = query[q].first;
-            for (int v: groups[g1]) {
-                if (oracle.labelOf(v) != g1) {
-                    oracle.setLabel(v, g1);
-                }
+        int tc = 0;
+        for (int i=0; i<M; ++i) {
+            type[i] = typeCycle[tc++];
+            if (tc == a+b) tc = 0;
+
+            int v = rand()%n;
+
+            switch (type[i]) {
+                case 0: query[i] = make_pair(v, labelCandidates[v][ rand() % labelCandidates[v].size()]); break;
+                case 1: query[i] = make_pair(rand()%n, rand()%n); break;
             }
-            int g2 = query[q].second;
-            for (int v: groups[g2]) {
-                if (oracle.labelOf(v) != g2) {
-                    oracle.setLabel(v, g2);
-                }
-            }
-            oracle.distanceBetweenLabels(g1, g2);
-
-            ++q;
         }
-        printf("%.12f ", stopTime());
+
+        printf("%.12f ", timeProportionTest(oracle, M, type, query)); 
     }
+
     printf("\n");
 }
 
-void printGroupLabels(int n) {
+template <class O>
+void performLabelToLabelGroupTest(int n, const vector< pair<int, int > > &edges, const vector<W> &weights, float frac, string filename) {
+    
+    srand(-1);
+    int gc = 0;
+
+    vector<int> labels(n);
+    vector< vector<int> > labelCandidates(n);
+    
+    vector< vector<int> > groups;
+    OracleTester::readGroupsFromFile(filename, groups);
+    fprintf(stderr, "groups! %d\n", (int)groups.size());
+
+    gc = 0;
+    for (vector<int> &g: groups) {
+        for (int v: g) {
+            labelCandidates[v].push_back(gc);       
+        }
+        ++gc;
+    }
+    for (vector<int> &c: labelCandidates) {
+        if (c.empty()) {
+            groups.push_back(vector<int>(1, gc));
+            c.push_back(gc++);
+        }
+    }
+    
+    for (int v=0; v<n; ++v) {
+        labels[v] = labelCandidates[v][ rand() % labelCandidates[v].size()];
+    }
+    
+    fprintf(stderr, "Constructing...\n");
+    fflush(stderr);
+    O oracle(n, edges, weights, labels);
+    fprintf(stderr, " - done\n");
+    
     for (int t=0; t<=T; ++t) {
-        printf("%d ", M / T * t);
+        fprintf(stderr, "t: %d\n", t);
+        vector< int > type(M);
+        vector< pair<int, int> > query(M);
+
+        int a = pow(n, 0.5+(float)(t-T/2)/T/frac);
+        int b = pow(n, 0.5+(float)(T/2-t)/T/frac);
+        vector<int> typeCycle(a+b);
+        for (int i=0; i<a; ++i) typeCycle[i] = 0;
+        for (int i=a; i<a+b; ++i) typeCycle[i] = 1;
+        random_shuffle(typeCycle.begin(), typeCycle.end());
+
+        int tc = 0;
+        for (int i=0; i<M; ++i) {
+            type[i] = typeCycle[tc++];
+            if (tc == a+b) tc = 0;
+
+            int v = rand()%n;
+
+            switch (type[i]) {
+                case 0: query[i] = make_pair(v, labelCandidates[v][ rand() % labelCandidates[v].size()]); break;
+                case 1: query[i] = make_pair(rand()%n, rand()%n); break;
+            }
+        }
+
+        printf("%.12f ", timeLabelProportionTest(oracle, M, type, query)); 
+    }
+
+    printf("\n");
+}
+
+
+void printProportionLabels(int n, float frac = 1.) {
+    for (int t=0; t<=T; ++t) {
+        printf("%.1f ", (float)(t*2-T)/T/frac);
     }
     printf("\n");
 }
@@ -226,13 +334,28 @@ void performVertexToLabelProportionTestAll(int n, const vector< pair<int, int> >
     performVertexToLabelProportionTest<OracleGeneral5ApproxUpdate>(n, edges, weights, frac);
     performVertexToLabelProportionTest<OracleGeneral5ApproxQuery>(n, edges, weights, frac);
     performVertexToLabelProportionTest<FullPlanarOracle>(n, edges, weights, frac);
-    performVertexToLabelProportionTest<FullPlanarOracle2>(n, edges, weights, frac);
 }
 
-void performLabelToLabelGroupTestAll(int n, const vector< pair<int, int> > &edges, const vector<W> &weights, string filename) {
-    printGroupLabels(n);
-    performLabelToLabelGroupTest<OracleNaiveSet>(n, edges, weights, filename);
-    performLabelToLabelGroupTest<OracleGeneral3Approx>(n, edges, weights, filename);
+void performLabelToLabelProportionTestAll(int n, const vector< pair<int, int> > &edges, const vector<W> &weights, float frac = 1.) {
+    printProportionLabels(n, frac);
+    performLabelToLabelProportionTest<OracleNaiveSet>(n, edges, weights, frac);
+    performLabelToLabelProportionTest<OracleGeneral3Approx>(n, edges, weights, frac);
+    performLabelToLabelProportionTest<FullFullPlanarOracle>(n, edges, weights, frac);
+}
+
+void performVertexToLabelGroupTestAll(int n, const vector< pair<int, int> > &edges, const vector<W> &weights, float frac, string filename) {
+    printProportionLabels(n, frac);
+    performVertexToLabelGroupTest<OracleNaive>(n, edges, weights, frac, filename);
+    performVertexToLabelGroupTest<OracleGeneral3Approx>(n, edges, weights, frac, filename);
+    performVertexToLabelGroupTest<OracleGeneral5ApproxUpdate>(n, edges, weights, frac, filename);
+    performVertexToLabelGroupTest<OracleGeneral5ApproxQuery>(n, edges, weights, frac, filename);
+    performVertexToLabelGroupTest<FullPlanarOracle>(n, edges, weights, frac, filename);
+}
+
+void performLabelToLabelGroupTestAll(int n, const vector< pair<int, int> > &edges, const vector<W> &weights, float frac, string filename) {
+    printProportionLabels(n, frac);
+    performLabelToLabelGroupTest<OracleNaiveSet>(n, edges, weights, frac, filename);
+    performLabelToLabelGroupTest<OracleGeneral3Approx>(n, edges, weights, frac, filename);
 }
 
 template <int epsn>
@@ -333,9 +456,14 @@ int main() {
 */
 
     {
-        performPlanarErrorTestAll(n, edges, weights);
+        performLabelToLabelProportionTestAll(n, edges, weights, 2.);
     }
 
+/*
+    {
+        performPlanarErrorTestAll(n, edges, weights);
+    }
+*/
 // Correctness test
 /*
     {

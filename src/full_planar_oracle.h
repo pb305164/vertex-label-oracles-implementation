@@ -112,7 +112,11 @@ class FullPlanarOracle : public PlanarOracle {
         int l = vertices[v].label;
 
         for (auto &p: vertices[v].rportals) {
-            portals[p.second].N_l[l].erase(make_pair(p.first, v));
+            auto it = portals[p.second].N_l.find(l);
+            it->second.erase(make_pair(p.first, v));
+            if (it->second.empty()) {
+                portals[p.second].N_l.erase(it);
+            }
         }
 
         for (pair<W, int> &curr: vertices[v].rdist) {
@@ -132,7 +136,7 @@ public:
             const vector< pair< int, int > >& edges, 
             const vector< W >& weights,
             const vector< int > llabels,
-            W eps = .5) : labels(n) {
+            W eps = 1.) : labels(n) {
         ro = min(n, 3);
         vertices = vector<Vertex>(n);
         for (int i=0; i<n; ++i) vertices[i].label = llabels[i];
@@ -174,21 +178,6 @@ public:
     }
 };
 
-class FullPlanarOracle2 : public FullPlanarOracle {
-public:
-    FullPlanarOracle2(
-            int n,
-            const vector< pair< int, int > >& edges, 
-            const vector< W >& weights,
-            const vector< int > llabels,
-            W eps = 1.) : FullPlanarOracle(n, edges, weights, llabels, eps) {}
-};
-
-
-
-
-
-
 class FullFullPlanarOracle : public PlanarOracle {
     
     struct Vertex {
@@ -205,7 +194,7 @@ class FullFullPlanarOracle : public PlanarOracle {
     vector< Label > labels;
 
     struct Portal {
-        unordered_map<int, set< pair<W, int> > > N_l;
+        map<int, set< pair<W, int> > > N_l;
         Portal() {}
     };
     vector< Portal > portals;
@@ -298,7 +287,11 @@ class FullFullPlanarOracle : public PlanarOracle {
         int l = vertices[v].label;
 
         for (auto &p: vertices[v].portals) {
-            portals[p.second].N_l[l].erase(make_pair(p.first, v));
+            auto it = portals[p.second].N_l.find(l);
+            it->second.erase(make_pair(p.first, v));
+            if (it->second.empty()) {
+                portals[p.second].N_l.erase(it);
+            }
         }
 
         for (pair<W, int> &curr: vertices[v].dist) {
@@ -334,7 +327,7 @@ public:
             const vector< pair< int, int > >& edges, 
             const vector< W >& weights,
             const vector< int > llabels,
-            W eps = .5) : labels(n) {
+            W eps = 1.) : labels(n) {
         ro = max(3, min(n, (int)sqrt(n)));
         vertices = vector<Vertex>(n);
         for (int i=0; i<n; ++i) vertices[i].label = llabels[i];
@@ -364,8 +357,10 @@ public:
     pair<W, int> labelToLabel(int v, int l) {
         pair<W, int> result(infinity, -1);
         for (auto &p: vertices[v].portals) {
-            auto it = portals[p.second].N_l[l].begin();
-            if (it == portals[p.second].N_l[l].end()) continue;
+            auto itt = portals[p.second].N_l.find(l);
+            if (itt == portals[p.second].N_l.end()) continue;
+            auto it = itt->second.begin();
+            if (it == itt->second.end()) continue;
             result = min(result, make_pair(p.first + it->first, it->second));
         }
         auto it = labels[l].S_v.find(v);
@@ -379,7 +374,9 @@ public:
     pair<W, pair<int, int> > distanceBetweenLabels(int l1, int l2) {
         pair<W, pair<int, int> > result(infinity, make_pair(-1, -1));
         for (auto &p: portals) {
+            if (p.N_l.find(l1) == p.N_l.end()) continue;
             if (p.N_l[l1].empty()) continue;
+            if (p.N_l.find(l2) == p.N_l.end()) continue;
             if (p.N_l[l2].empty()) continue;
             auto v = *p.N_l[l1].begin();
             auto u = *p.N_l[l2].begin();
