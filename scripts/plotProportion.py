@@ -5,11 +5,10 @@ import matplotlib.pyplot as plt
 import pylab
 import sys
 
-plt.xlabel('ratio of update queries to distance queries (n^eps)')
+plt.xlabel('logarithm of ratio of update queries to distance queries')
 plt.ylabel('time (sec)')
-plt.title('A total time of 7000 consecutive distance and update queries')
 
-symbols = ['ro', 'bs', 'g<', 'y>', 'kx', 'k+']
+symbols = ['-.ro', '-.bs', '-g<', '-y>', ':kx', ':k+']
 colors = ['r', 'b', 'g', 'y', 'k', 'k']
 
 plt.grid(True)
@@ -27,11 +26,15 @@ for i in range(0, len(labels)):
 plt.gca().set_yscale('log')
 pylab.xticks(range(0, len(labels)), labels)
 
+legend = ['naive', 'gen. 3-app.', 'gen. 5-app. v1', 'gen. 5-app. v2', 'planar 2-app.']
+
 s = 0
 for v in a[1:]:
-    plt.plot(v, symbols[s])
-    plt.plot(v, colors[s])
+    plt.plot(v, symbols[s], label=legend[s])
+#    plt.plot(v, colors[s])
     s += 1
+
+plt.legend(loc=4)
 
 if len(sys.argv) == 2:
     plt.savefig(sys.argv[1] + '.png');
