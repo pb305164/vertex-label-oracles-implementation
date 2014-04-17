@@ -38,7 +38,7 @@ double timeProportionTest(O &oracle, int m, const vector<int> &type, const vecto
     return stopTime();
 }
     
-const int K = 10;
+const int K = 100;
 const int T = 20;
 const int M = 10000;
 
@@ -181,7 +181,6 @@ void performLabelToLabelGroupTest(int n, const vector< pair<int, int> > &edges, 
     fflush(stderr);
     O oracle(n, edges, weights, labels);
     fprintf(stderr, " - done\n");
-
     
     int q = 0;
     for (int t=0; t<=T; ++t) {
@@ -236,6 +235,79 @@ void performLabelToLabelGroupTestAll(int n, const vector< pair<int, int> > &edge
     performLabelToLabelGroupTest<OracleGeneral3Approx>(n, edges, weights, filename);
 }
 
+template <int epsn>
+void performPlanarErrorTest(int n, const vector< pair<int, int> > &edges, const vector<W> &weights) {
+    srand(-1);
+
+    float eps = (float)epsn/100;
+    vector<int> labels(n);
+// random
+    for (int i=0; i<n; ++i) labels[i] = rand() % n;
+// groups of K
+/*
+    for (int i=0; i<n; ++i) labels[i] = i / K;
+    vector<int> labelsCopy(labels);
+    int last = 0;
+*/
+    fprintf(stderr, "Constructing...\n");
+    fflush(stderr);
+    OracleNaive oraclen(n, edges, weights, labels);
+    FullPlanarOracle oracle(n, edges, weights, labels, eps);
+    fprintf(stderr, " - done\n");
+
+    printf("%.2f ", 1+eps);
+
+    vector< pair<int, int> > query(M);
+    vector< float > result(M);
+    vector< float > approx(M);
+
+    for (int i=0; i<M; ++i) {
+        query[i] = make_pair(rand()%n, oraclen.labelOf(rand()%n));
+        result[i] = oraclen.distanceToLabel(query[i].first, query[i].second).first;
+    }
+
+    startTime();
+
+    for (int i=0; i<M; ++i) {
+        approx[i] = oracle.distanceToLabel(query[i].first, query[i].second).first;
+    }
+
+    printf("%.12f ", stopTime());
+
+    float err = 0;
+    for (int i=0; i<M; ++i) {
+        if (result[i] == 0) {
+            err += 1;
+        } else {
+            err += approx[i] / result[i];
+        }
+    }
+
+    printf("%.12f\n", err/M);
+}
+
+void performPlanarErrorTestAll(int n, const vector< pair<int, int> > &edges, const vector<W> &weights) {
+    performPlanarErrorTest<20>(n, edges, weights);
+    performPlanarErrorTest<30>(n, edges, weights);
+    performPlanarErrorTest<40>(n, edges, weights);
+    performPlanarErrorTest<50>(n, edges, weights);
+    performPlanarErrorTest<60>(n, edges, weights);
+    performPlanarErrorTest<70>(n, edges, weights);
+    performPlanarErrorTest<80>(n, edges, weights);
+    performPlanarErrorTest<90>(n, edges, weights);
+    performPlanarErrorTest<100>(n, edges, weights);
+    performPlanarErrorTest<110>(n, edges, weights);
+    performPlanarErrorTest<120>(n, edges, weights);
+    performPlanarErrorTest<130>(n, edges, weights);
+    performPlanarErrorTest<140>(n, edges, weights);
+    performPlanarErrorTest<150>(n, edges, weights);
+    performPlanarErrorTest<160>(n, edges, weights);
+    performPlanarErrorTest<170>(n, edges, weights);
+    performPlanarErrorTest<180>(n, edges, weights);
+    performPlanarErrorTest<190>(n, edges, weights);
+    performPlanarErrorTest<200>(n, edges, weights);
+}
+
 int main() {
     int n;
     vector< pair<int, int> > edges;
@@ -254,27 +326,39 @@ int main() {
         performLabelToLabelGroupTestAll(n, edges, weights, "../dblp-g.in");
     }
 */
-
+/*
     {
         performVertexToLabelProportionTestAll(n, edges, weights, 2.);
     }
+*/
 
+    {
+        performPlanarErrorTestAll(n, edges, weights);
+    }
 
 // Correctness test
 /*
     {
+        srand(24);
         const int K = 500;
         int T = 10;
-        OracleTester::selectQueries(n, 4, K, labels, updates);
+//        OracleTester::selectQueries(n, 4, K, labels, updates);
+        labels.resize(n);
+        for (int i=0; i<n; ++i) labels[i] = i;
+        updates.resize(K);
+        for (auto &u: updates) {
+            u = make_pair(rand()%n, rand()%n);
+        }
 
         OracleGeneral3Approx oracle3(n, edges, weights, labels);
         OracleGeneral5ApproxQuery oracle5q(n, edges, weights, labels);
         OracleGeneral5ApproxUpdate oracle5u(n, edges, weights, labels);
         OracleNaive oraclen(n, edges, weights, labels);
         FullPlanarOracle oraclep(n, edges, weights, labels, 0.5);
+        FullFullPlanarOracle oraclepp(n, edges, weights, labels, 0.5);
 	
 	double oracle3Err = 0, oracle5qErr = 0, oracle5uErr = 0, oraclepErr = 0;
-	double oracle3LLErr = 0;
+	double oracle3LLErr = 0, oraclepLLErr = 0;
 
         for (int i=0; i<(int)updates.size(); ++i) {
             printf("%d\n", i);
@@ -285,6 +369,7 @@ int main() {
             oracle5q.setLabel(update.first, update.second);
             oracle5u.setLabel(update.first, update.second);
             oraclep.setLabel(update.first, update.second);
+            oraclepp.setLabel(update.first, update.second);
 
             for (int t=0; t<T; ++t) {
                 int u = rand()%n;
@@ -319,19 +404,24 @@ int main() {
             }
 
             for (int t=0; t<T; ++t) {
-            int u = rand()%n;
+                int u = rand()%n;
                 int v = rand()%n;
 
                 auto exact = oraclen.distanceBetweenLabels(oraclen.labelOf(u), oraclen.labelOf(v));
                 auto approx3 = oracle3.distanceBetweenLabels(oracle3.labelOf(u), oracle3.labelOf(v));
+                auto approxp = oraclepp.distanceBetweenLabels(oraclepp.labelOf(u), oraclepp.labelOf(v));
 
                 assert(exact.first <= approx3.first);
+                assert(exact.first <= approxp.first);
                 assert(exact.first * 3 >= approx3.first);
+                assert(exact.first * 1.5 >= approxp.first);
 
 		if(exact.first == 0) {
 			oracle3LLErr += 1;
+			oraclepLLErr += 1;
 		} else {
 			oracle3LLErr += approx3.first / exact.first;
+			oraclepLLErr += approxp.first / exact.first;
 		}
             }
         }
@@ -342,6 +432,7 @@ int main() {
 	cout << "approx p 1.5 " << oraclepErr / (K*T) << endl;
 	
 	cout << "approx 3 l-l " << oracle3LLErr / (K*T) << endl;
+	cout << "approx p l-l " << oraclepLLErr / (K*T) << endl;
     }
 */
     // Time test
