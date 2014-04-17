@@ -244,14 +244,15 @@ int main() {
     vector< pair< int, int > > updates, queries;
 
 //    OracleTester::generateGraph(2000, 8000, 200, n, edges, weights);
-    OracleTester::readUnweightedGraphFromInput(n, edges, weights);
+    OracleTester::readGraphFromInput(n, edges, weights);
 
     fprintf(stderr, "Read %d %d!\n", n, (int)edges.size());
     fflush(stderr);
+/*
     {
         performLabelToLabelGroupTestAll(n, edges, weights, "../dblp-g.in");
     }
-
+*/
 /*
     {
         performVertexToLabelProportionTestAll(n, edges, weights, 2.);
@@ -259,7 +260,7 @@ int main() {
 */
 
 // Correctness test
-/*
+
     {
         const int K = 500;
         int T = 10;
@@ -341,7 +342,7 @@ int main() {
 	
 	cout << "approx 3 l-l " << oracle3LLErr / (K*T) << endl;
     }
-*/
+
     // Time test
 /*
     {

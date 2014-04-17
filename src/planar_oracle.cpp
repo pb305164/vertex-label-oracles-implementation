@@ -166,7 +166,7 @@ PlanarOracle::selectPathPortals(
 
     assert(paths.size() <= 3);
     portal.clear();    
-
+/*
     for (int j=0; j<(int)paths.size(); ++j) {
         pair<int, int> prevV(-1, -1);
         W dist = infinity;
@@ -179,6 +179,22 @@ PlanarOracle::selectPathPortals(
             } else {
                 w = g.es()[paths[j][paths.size()-2].second].w;
             }
+
+            if (dist + w > alpha*eps/2) {
+                portal.push_back(v);
+                dist = 0;
+            }
+
+            dist += w;
+        }
+    }
+*/
+    for (int j=0; j<(int)paths.size(); ++j) {
+        pair<int, int> prevV(-1, -1);
+        W dist = infinity;
+        for (int k=0; k<(int)paths[j].size()-1; ++k) {
+            int v = paths[j][k].first;
+            W w = g.es()[paths[j][k].second].w;
 
             if (dist + w > alpha*eps/2) {
                 portal.push_back(v);
