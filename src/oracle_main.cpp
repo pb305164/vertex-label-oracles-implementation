@@ -322,7 +322,7 @@ void performLabelToLabelGroupTest(int n, const vector< pair<int, int > > &edges,
 
 void printProportionLabels(int n, float frac = 1.) {
     for (int t=0; t<=T; ++t) {
-        printf("%.1f ", (float)(t*2-T)/T/frac);
+        printf("%.2f ", (float)(t*2-T)/T/frac);
     }
     printf("\n");
 }
