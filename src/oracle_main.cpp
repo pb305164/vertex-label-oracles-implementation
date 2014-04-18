@@ -349,7 +349,6 @@ void performVertexToLabelGroupTestAll(int n, const vector< pair<int, int> > &edg
     performVertexToLabelGroupTest<OracleGeneral3Approx>(n, edges, weights, frac, filename);
     performVertexToLabelGroupTest<OracleGeneral5ApproxUpdate>(n, edges, weights, frac, filename);
     performVertexToLabelGroupTest<OracleGeneral5ApproxQuery>(n, edges, weights, frac, filename);
-    performVertexToLabelGroupTest<FullPlanarOracle>(n, edges, weights, frac, filename);
 }
 
 void performLabelToLabelGroupTestAll(int n, const vector< pair<int, int> > &edges, const vector<W> &weights, float frac, string filename) {
@@ -440,13 +439,17 @@ int main() {
     vector< pair< int, int > > updates, queries;
 
 //    OracleTester::generateGraph(2000, 8000, 200, n, edges, weights);
-    OracleTester::readGraphFromInput(n, edges, weights);
+    OracleTester::readUnweightedGraphFromInput(n, edges, weights);
 
     fprintf(stderr, "Read %d %d!\n", n, (int)edges.size());
     fflush(stderr);
+
+    {
+        performVertexToLabelGroupTestAll(n, edges, weights, 2., "../dblp-g.in");
+    }
 /*
     {
-        performLabelToLabelGroupTestAll(n, edges, weights, "../dblp-g.in");
+        performLabelToLabelGroupTestAll(n, edges, weights, 2., "../dblp-g.in");
     }
 */
 /*
@@ -454,11 +457,11 @@ int main() {
         performVertexToLabelProportionTestAll(n, edges, weights, 2.);
     }
 */
-
+/*
     {
         performLabelToLabelProportionTestAll(n, edges, weights, 2.);
     }
-
+*/
 /*
     {
         performPlanarErrorTestAll(n, edges, weights);
