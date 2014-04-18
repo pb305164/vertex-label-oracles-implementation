@@ -9,7 +9,7 @@ plt.xlabel('logarithm of ratio of update queries to distance queries')
 plt.ylabel('time (sec)')
 
 symbols = ['-.ro', '-.bs', '-g<', '-y>', ':kx', ':k+']
-colors = ['r', 'b', 'g', 'y', 'k', 'k']
+#symbols = ['-ro', '-.bs', ':kx']
 
 plt.grid(True)
 
@@ -27,6 +27,7 @@ plt.gca().set_yscale('log')
 pylab.xticks(range(0, len(labels)), labels)
 
 legend = ['naive', 'gen. 3-app.', 'gen. 5-app. v1', 'gen. 5-app. v2', 'planar 2-app.']
+#legend = ['naive', 'gen. 3-app.', 'planar 2-app.']
 
 s = 0
 for v in a[1:]:
