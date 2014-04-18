@@ -439,7 +439,7 @@ int main() {
     vector< pair< int, int > > updates, queries;
 
 //    OracleTester::generateGraph(2000, 8000, 200, n, edges, weights);
-    OracleTester::readGraphFromInput(n, edges, weights);
+    OracleTester::readUnweightedGraphFromInput(n, edges, weights);
 
     fprintf(stderr, "Read %d %d!\n", n, (int)edges.size());
     fflush(stderr);
@@ -448,16 +448,16 @@ int main() {
         performVertexToLabelGroupTestAll(n, edges, weights, 2., "../amazon-g.in");
     }
 */
-    /*
+
     {
         performLabelToLabelGroupTestAll(n, edges, weights, 2., "../dblp-g.in");
     }
-*/
 
+/*
     {
         performVertexToLabelProportionTestAll(n, edges, weights, 2.);
     }
-
+*/
 /*
     {
         performLabelToLabelProportionTestAll(n, edges, weights, 2.);
