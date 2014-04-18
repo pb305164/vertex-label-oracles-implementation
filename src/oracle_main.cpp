@@ -55,7 +55,7 @@ double timeLabelProportionTest(O &oracle, int m, const vector<int> &type, const 
     
 const int K = 100;
 const int T = 20;
-const int M = 2000;
+const int M = 10000;
 
 template <class O>
 void performVertexToLabelProportionTest(int n, const vector< pair<int, int> > &edges, const vector<W> &weights, float frac = 1.) {
@@ -439,24 +439,25 @@ int main() {
     vector< pair< int, int > > updates, queries;
 
 //    OracleTester::generateGraph(2000, 8000, 200, n, edges, weights);
-    OracleTester::readUnweightedGraphFromInput(n, edges, weights);
+    OracleTester::readGraphFromInput(n, edges, weights);
 
     fprintf(stderr, "Read %d %d!\n", n, (int)edges.size());
     fflush(stderr);
-
-    {
-        performVertexToLabelGroupTestAll(n, edges, weights, 2., "../dblp-g.in");
-    }
 /*
+    {
+        performVertexToLabelGroupTestAll(n, edges, weights, 2., "../amazon-g.in");
+    }
+*/
+    /*
     {
         performLabelToLabelGroupTestAll(n, edges, weights, 2., "../dblp-g.in");
     }
 */
-/*
+
     {
         performVertexToLabelProportionTestAll(n, edges, weights, 2.);
     }
-*/
+
 /*
     {
         performLabelToLabelProportionTestAll(n, edges, weights, 2.);
