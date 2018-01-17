@@ -10,20 +10,20 @@ make
 cd ..
 
 # Ściągnięcie i przetworzenie mapy
-wget http://download.bbbike.org/osm/bbbike/Warsaw/Warsaw.osm.gz
-gunzip Warsaw.osm.gz
-./oracles/src/osrm/build/osrm-extract -p oracles/profile.lua Warsaw.osm
-./oracles/src/osrm/build/osrm-contract Warsaw.osrm
+wget http://download.bbbike.org/osm/bbbike/Gliwice/Gliwice.osm.gz
+gunzip Gliwice.osm.gz
+./oracles/src/osrm/build/osrm-extract -p oracles/src/osrm/profiles/profile.lua Gliwice.osm
+./oracles/src/osrm/build/osrm-contract Gliwice.osrm
 
 # Generowanie grafu, testu oraz przetestowanie wyroczni
-./gen-graph/gen-graph Warsaw.osm > warsaw_graph
-./oracles/gen_test warsaw_graph > warsaw_test
-./oracles/run_tests Warsaw.osrm warsaw_graph warsaw_test
+./gen-graph/gen-graph Gliwice.osm > gliwice_graph
+./oracles/gen_test gliwice_graph > gliwice_test
+./oracles/run_tests Gliwice.osrm gliwice_graph gliwice_test
 ```
 
 ## Struktura repozytorium
 
-* gen-graph: Tu znajduje się parser open street map 
+* gen-graph: Tu znajduje się parser map / generator grafów. 
 * oracles: Tu znajdują się wyrocznie oraz generator testów. W oracles/src/osrm jest kod osrm-backend.
 * build_osrm.sh: Krótki skrypt budujący biblioteki oraz programy osrm.
 
@@ -62,7 +62,7 @@ wykonywalne projektu osrm. Co można przeczytać w komentarzu *oracles/src/osrm_
 użytego algorytmu mapa musi zostać odpowiednio przetworzona.
 
 Przetwarzanie mapy zawsze zaczyna się od *osrm-extract* któremu oprócz ścieżki do mapy musimy również podać profil za pomocą
-parametru -p. Przygotowałem profil który mam nadzieje jest odpowiedni w *oracles/profile.lua*. Wykonanie tego programu
+parametru -p. Przygotowałem profil który mam nadzieje jest odpowiedni w *oracles/src/osrm/profiles/profile.lua*. Wykonanie tego programu
 generuje pliki osrm (w tym samym miejscu co oryginalna mapa) który następnie podajemy jako argument do kolejnych
 programów w zależności od użytego algorytmu.
 
