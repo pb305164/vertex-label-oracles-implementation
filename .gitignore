@@ -1,0 +1,14 @@
+*.d
+*.o
+*.so
+*.a
+
+oracles/src/osrm/build
+gen-graph/tests/*
+!gen-graph/tests/test.osm
+!gen-graph/tests/test.osm2
+.idea
+CMakeLists.txt
+cmake-build-debug
+
+
