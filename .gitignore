@@ -8,7 +8,8 @@ gen-graph/tests/*
 !gen-graph/tests/test.osm
 !gen-graph/tests/test.osm2
 .idea
-CMakeLists.txt
 cmake-build-debug
 
-
+gen-graph/CMakeLists.txt
+oracles/CMakeLists.txt
+./CMakeLists.txt

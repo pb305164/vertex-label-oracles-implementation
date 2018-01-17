@@ -1,4 +1,4 @@
-!/bin/bash
+#!/bin/bash
 
 cd oracles/src/osrm
 mkdir -p build
