@@ -9,21 +9,15 @@
 #include "astar_oracle.h"
 #include "osrm_oracle.h"
 
-#include <cstdio>
-#include <cassert>
 #include <chrono>
-#include <map>
-#include <vector>
-#include <ratio>
-
 
 using std::map;
+
 
 template <class T>
 tuple<W, W, int, std::chrono::duration<double, std::milli> >  test_distanceToVertex(T &oracle, vector<pair<W, pair<int, int> > > &args)
 {
     std::chrono::duration<double, std::milli> t_sum = std::chrono::milliseconds::zero();
-//    pair<W, int> result;
     W result;
     W d_sum=0, d_res=0;
     int suc=0;
@@ -40,6 +34,7 @@ tuple<W, W, int, std::chrono::duration<double, std::milli> >  test_distanceToVer
     }
     return make_tuple(d_sum, d_res, suc, t_sum);
 }
+
 
 template <class T>
 tuple<W, W, int, std::chrono::duration<double, std::milli> > test_distanceToLabel(T &oracle, vector<pair<W, pair<int, int> > > &args)
@@ -62,6 +57,7 @@ tuple<W, W, int, std::chrono::duration<double, std::milli> > test_distanceToLabe
     return make_tuple(d_sum, d_res, suc, t_sum);
 }
 
+
 template <class T>
 tuple<W, W, int, std::chrono::duration<double, std::milli> > test_distanceBetweenLabels(T &oracle, vector<pair<W, pair<int, int> > > &args)
 {
@@ -83,20 +79,24 @@ tuple<W, W, int, std::chrono::duration<double, std::milli> > test_distanceBetwee
     return make_tuple(d_sum, d_res, suc, t_sum);
 }
 
+
+// Run tests on test function
 template <class T>
-std::chrono::duration<double, std::milli> run_tests(T &oracle, vector<pair<W, pair<int, int> > > &zapytania,
-                                                    tuple<W, W, int, std::chrono::duration<double, std::milli> > (test_func)(T&, vector<pair<W, pair<int, int> > >&))
+std::chrono::duration<double, std::milli> run_tests(
+        T &oracle, vector<pair<W, pair<int, int> > > &queries,
+        tuple<W, W, int, std::chrono::duration<double, std::milli> > (test_func)(T&, vector<pair<W, pair<int, int> > >&))
 {
     W d_exp, d_got;
     std::chrono::duration<double, std::milli> sum;
     int suc;
-    tie(d_exp, d_got, suc, sum) = test_func(oracle, zapytania);
-    printf("Czasy testu suma: %lf  śr: %lf  poprawnie %d/%lu\n", sum.count(), sum.count()/suc, suc, zapytania.size());
+    tie(d_exp, d_got, suc, sum) = test_func(oracle, queries);
+    printf("Czasy testu suma: %lf  śr: %lf  poprawnie %d/%lu\n", sum.count(), sum.count()/suc, suc, queries.size());
     printf("Wyniki nadwyżka: %f  śr nad: %f  proc nad: %f  śr dł: %f\n\n", d_got-d_exp, (d_got-d_exp)/suc, d_got/d_exp, d_exp/suc);
     return sum;
 }
 
-// vertex-vertex
+
+// Run vertex-vertex tests
 template <class T>
 void run_all_vv_tests(T &oracle, vector<pair<W, pair<int, int> > > tests[3][3])
 {
@@ -108,7 +108,8 @@ void run_all_vv_tests(T &oracle, vector<pair<W, pair<int, int> > > tests[3][3])
     printf("SUMA CZASU dla distanceToVertex  %lf\n\n", sum.count());
 }
 
-// vertex-label
+
+// Run vertex-label tests
 template <class T>
 void run_all_vl_tests(T &oracle, vector<pair<W, pair<int, int> > > tests[3][3])
 {
@@ -121,7 +122,7 @@ void run_all_vl_tests(T &oracle, vector<pair<W, pair<int, int> > > tests[3][3])
 }
 
 
-// label-label
+// Run label-label tests
 template <class T>
 void run_all_ll_tests(T &oracle, vector<pair<W, pair<int, int> > > tests[3][3])
 {
@@ -134,7 +135,7 @@ void run_all_ll_tests(T &oracle, vector<pair<W, pair<int, int> > > tests[3][3])
 }
 
 
-
+// Run all types of tests (vertex-vertex, vertex-label, label-label)
 template <class T>
 void run_all_tests(T &oracle, vector<pair<W, pair<int, int> > > tests[3][3])
 {
@@ -142,6 +143,7 @@ void run_all_tests(T &oracle, vector<pair<W, pair<int, int> > > tests[3][3])
     run_all_vl_tests(oracle, tests);
     run_all_ll_tests(oracle, tests);
 }
+
 
 int main(int argc, char* argv[]) {
     vector<pair<int, int>> edges;
@@ -153,13 +155,16 @@ int main(int argc, char* argv[]) {
     vector<pair<W,W> > coords;
     vector<pair<W, pair<int, int> > > tests[3][3];
     int n, m, max_label;
+    W EPS = 1.;
 
-    if (argc != 4) {
-        fprintf(stderr, "Usage: %s <osrm-file> <generated-graph> <generated-test>\n", argv[0]);
+    if (argc != 4 && argc != 5) {
+        fprintf(stderr, "Usage: %s osrm-file generated-graph generated-test [(int)epsilon for planar oracle (default = 1)]>\n", argv[0]);
         return 1;
     }
+    // Eps in planar oracles
+    if (argc == 5) EPS = stof(argv[4]);
 
-    // READ GRAPH
+    // Read graph
     FILE *pfile = fopen(argv[2], "r");
     if (pfile == nullptr) {
         fprintf(stderr, "ERROR while opening graph file\n");
@@ -168,33 +173,38 @@ int main(int argc, char* argv[]) {
     read_graph(pfile, n, m, max_label, max_speed, edges, types, max_speeds, distances, labels, coords);
     fclose(pfile);
 
-    // CHANGE DISTANCE TO TIME (TODO prog flag)
+    // Change distance to time (TODO add as program option)
     for (int i=0; i<m; i++) {
         distances[i] = distances[i] / max_speeds[i];
     }
 
-    // READ TEST
+    // Read tests
     pfile = fopen(argv[3], "r");
     if (pfile == nullptr) {
         fprintf(stderr, "ERROR while opening test file\n");
         fclose(pfile);
         return 1;
     }
+
+    // Read 3 types of queries, vertex-vertex, vertex-label, label-label
     for (int i=0; i<3; i++) {
         int long_size, med_size, short_size, a, b;
         W d;
 
+        // Short distance queries
         fscanf(pfile, "%d %d %d", &short_size, &med_size, &long_size);
         for (int j = 0; j < short_size; j++) {
             fscanf(pfile, "%d %d %f", &a, &b, &d);
             tests[i][0].emplace_back(make_pair(d, make_pair(a, b)));
         }
 
+        // Medium distance queries
         for (int j = 0; j < med_size; j++) {
             fscanf(pfile, "%d %d %f", &a, &b, &d);
             tests[i][1].emplace_back(make_pair(d, make_pair(a, b)));
         }
 
+        // Long distance queries
         for (int j = 0; j < long_size; j++) {
             fscanf(pfile, "%d %d %f", &a, &b, &d);
             tests[i][2].emplace_back(make_pair(d, make_pair(a, b)));
@@ -215,44 +225,69 @@ int main(int argc, char* argv[]) {
 //    }
 
 
+    std::chrono::duration<double, std::milli> build_time;
     printf("FULL PLANAR\n");
     {
-        FullPlanarOracle oracle(n, edges, distances, labels);
+        auto t1 = std::chrono::steady_clock::now();
+        FullPlanarOracle oracle(n, edges, distances, labels, EPS);
+        auto t2 = std::chrono::steady_clock::now();
+        build_time = t2 - t1;
+        printf("Czas budowy: %lfs\n", build_time.count()/1000);
         run_all_vl_tests(oracle, tests);
         printf("\n\n");
     }
 
     printf("FULL FULL PLANAR\n");
     {
-        FullFullPlanarOracle oracle(n, edges, distances, labels);
+        auto t1 = std::chrono::steady_clock::now();
+        FullFullPlanarOracle oracle(n, edges, distances, labels, EPS);
+        auto t2 = std::chrono::steady_clock::now();
+        build_time = t2 - t1;
+        printf("Czas budowy: %lfs\n", build_time.count()/1000);
         run_all_ll_tests(oracle, tests);
         printf("\n\n");
     }
 
     printf("OSRM Oracle\n");
     {
+        auto t1 = std::chrono::steady_clock::now();
         OsrmOracle oracle(argv[1], max_label, coords, labels);
+        auto t2 = std::chrono::steady_clock::now();
+        build_time = t2 - t1;
+        printf("Czas budowy: %lfs\n", build_time.count()/1000);
         run_all_tests(oracle, tests);
         printf("\n\n");
     }
 
     printf("5 APPROX QUERY\n");
     {
+        auto t1 = std::chrono::steady_clock::now();
         OracleGeneral5ApproxQuery oracle(n, edges, distances, labels);
+        auto t2 = std::chrono::steady_clock::now();
+        build_time = t2 - t1;
+        printf("Czas budowy: %lfs\n", build_time.count()/1000);
         run_all_vl_tests(oracle, tests);
         printf("\n\n");
     }
 
     printf("5 APPROX UPDATE\n");
     {
+        auto t1 = std::chrono::steady_clock::now();
         OracleGeneral5ApproxUpdate oracle(n, edges, distances, labels);
+        auto t2 = std::chrono::steady_clock::now();
+        build_time = t2 - t1;
+        printf("Czas budowy: %lfs\n", build_time.count()/1000);
         run_all_vl_tests(oracle, tests);
         printf("\n\n");
     }
 
     printf("3 APPROX LIGHT\n");
     {
+        auto t1 = std::chrono::steady_clock::now();
         OracleGeneral3ApproxLight oracle(n, edges, distances, labels);
+        auto t2 = std::chrono::steady_clock::now();
+        build_time = t2 - t1;
+        printf("Czas budowy: %lfs\n", build_time.count()/1000);
         run_all_vl_tests(oracle, tests);
         run_all_ll_tests(oracle, tests);
         printf("\n\n");
@@ -260,7 +295,11 @@ int main(int argc, char* argv[]) {
 
     printf("3 APPROX\n");
     {
+        auto t1 = std::chrono::steady_clock::now();
         OracleGeneral3Approx oracle(n, edges, distances, labels);
+        auto t2 = std::chrono::steady_clock::now();
+        build_time = t2 - t1;
+        printf("Czas budowy: %lfs\n", build_time.count()/1000);
         run_all_vl_tests(oracle, tests);
         run_all_ll_tests(oracle, tests);
         printf("\n\n");
@@ -268,16 +307,23 @@ int main(int argc, char* argv[]) {
 
     printf("ASTAR\n");
     {
+        auto t1 = std::chrono::steady_clock::now();
         AstarOracle oracle(n, m, max_label, max_speed, edges, distances, labels, coords);
+        auto t2 = std::chrono::steady_clock::now();
+        build_time = t2 - t1;
+        printf("Czas budowy: %lfs\n", build_time.count()/1000);
         run_all_tests(oracle, tests);
         printf("\n\n");
     }
 
     printf("DIJKSTRA\n");
     {
+        auto t1 = std::chrono::steady_clock::now();
         DijkstraOracle oracle(n, m, max_label, edges, distances, labels);
+        auto t2 = std::chrono::steady_clock::now();
+        build_time = t2 - t1;
+        printf("Czas budowy: %lfs\n", build_time.count()/1000);
         run_all_tests(oracle, tests);
         printf("\n\n");
     }
-
 }

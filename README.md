@@ -35,7 +35,7 @@ Programy korzystają z kilku bibliotek (pierwsza lub dwie pierwsze z nich mogą 
 managerze pakietów można ją pobrać [tutaj](https://geographiclib.sourceforge.io/).
 * mpfr: Powinna być dostępna w managerze pakietów jeśli nie jest dostępna [tutaj](http://www.mpfr.org/).
 * boost - system filesystem iostreams program_options regex date_time thread
-* tbb
+* tbb - Bilioteka storzona przez intela do wielowątkowości, powina być dostępna w managerze pakietów wiekszości dystrybucji
 
 Następnie należy zbudować osrm np za pomocą skryptu *build_osrm.sh*.
 Po czym przechodzimy do obu z folderów i wykonujemy polecenie *make*

@@ -9,16 +9,16 @@ common.o: common.h common.cpp
 pugixml.o: pugixml.hpp pugiconfig.hpp pugixml.cpp
 	g++ -c ${LIB_FLAGS} pugixml.cpp
 
-KDTree.o: KDTree.cpp KDTree.h common.h common.cpp
+KDTree.o: KDTree.cpp KDTree.h
 	g++ -c ${FLAGS} KDTree.cpp
 
-make_planar.o: make_planar.cpp make_planar.h common.h common.cpp
+make_planar.o: make_planar.cpp make_planar.h
 	g++ -c ${FLAGS} make_planar.cpp
 
-parse_osm.o: parse_osm.cpp parse_osm.h KDTree.cpp common.h common.cpp
+parse_osm.o: parse_osm.cpp parse_osm.h
 	g++ -c ${FLAGS} parse_osm.cpp
 
-gen-graph: main.cpp parse_osm.o pugixml.o common.o KDTree.o make_planar.o
+gen-graph: main.cpp common.o pugixml.o KDTree.o make_planar.o parse_osm.o
 	g++ -o gen-graph ${FLAGS} -l Geographic -l mpfr main.cpp parse_osm.o pugixml.o common.o KDTree.o make_planar.o
 
 clean:

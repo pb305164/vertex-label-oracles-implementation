@@ -1,5 +1,9 @@
 #include "KDTree.h"
 
+using namespace std;
+using mpfr::mpreal;
+
+
 bool lat_cmp(Node a, Node b) {
     return a.lat < b.lat;
 }
@@ -9,7 +13,7 @@ bool lon_cmp(Node a, Node b) {
 }
 
 
-KDTree::KDTree(std::vector<Node> &vnodes, int lvl) {
+KDTree::KDTree(vector<Node> &vnodes, int lvl) {
     level = lvl;
     if (level % 2) {
         sort(vnodes.begin(), vnodes.end(), lat_cmp);
@@ -25,17 +29,17 @@ KDTree::KDTree(std::vector<Node> &vnodes, int lvl) {
         LTree = NULL;
         RTree = new KDTree(vnodes[1]);
     } else {
-        std::size_t const half_size = vnodes.size() / 2;
-        std::vector<Node> vn1(vnodes.begin(), vnodes.begin() + half_size);
-        std::vector<Node> vn2(vnodes.begin() + half_size, vnodes.end());
-        node = vnodes[vnodes.size()/2];
+        size_t const half_size = vnodes.size() / 2;
+        vector<Node> vn1(vnodes.begin(), vnodes.begin() + half_size);
+        vector<Node> vn2(vnodes.begin() + half_size + 1, vnodes.end());
+        node = vnodes[half_size];
         LTree = new KDTree(vn1, level+1);
         RTree = new KDTree(vn2, level+1);
     }
 }
 
-void KDTree::find_nearest(mpfr::mpreal lat, mpfr::mpreal lon, mpfr::mpreal &best_dist, Node &best_node) {
-    mpfr::mpreal my_dist = calc_distance(lat, lon, node.lat, node.lon);
+void KDTree::find_nearest(mpreal lat, mpreal lon, mpreal &best_dist, Node &best_node) {
+    mpreal my_dist = calc_distance(lat, lon, node.lat, node.lon);
     if (best_dist > my_dist) {
         best_dist = my_dist;
         best_node = node;
@@ -77,7 +81,7 @@ void KDTree::print(int indent) {
     }
 }
 
-KDTree KDTree::create(std::vector<Node> &vnodes) {
+KDTree KDTree::create(vector<Node> &vnodes) {
     assert(vnodes.size()>0);
     return KDTree(vnodes, 0);
 }
@@ -93,10 +97,10 @@ void KDTree::print() {
     print(0);
 }
 
-std::pair<Node, mpfr::mpreal> KDTree::find_nearest(mpfr::mpreal lat, mpfr::mpreal lon) {
+pair<Node, mpreal> KDTree::find_nearest(mpreal lat, mpreal lon) {
     Node best_node = node;
-    mpfr::mpreal best_dist = MAX_DOUBLE;
+    mpreal best_dist = MAX_DOUBLE;
     find_nearest(lat, lon, best_dist, best_node);
-    return std::make_pair(best_node, best_dist);
+    return make_pair(best_node, best_dist);
 }
 

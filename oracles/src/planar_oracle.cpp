@@ -25,13 +25,13 @@ PlanarOracle::initialize(
     }
     embed(graph);
 
-    pair<W, W> stretch(getStretch(graph));    
+    pair<W, W> stretch(getStretch(graph));
     W alpha = stretch.first;
-    cerr << stretch.first << "  " << stretch.second << std::endl;
+//    cerr << stretch.first << "  " << alpha << "  " << stretch.second << std::endl;
 
     while (alpha <= stretch.second) {
 	
-	cerr << alpha << endl;
+//	cerr << alpha << endl;
 
         vector< vector<int> > tmpParents, tmpMappings;
         vector< vector<bool> > tmpSources;
