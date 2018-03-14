@@ -173,6 +173,40 @@ int main(int argc, char* argv[]) {
     read_graph(pfile, n, m, max_label, max_speed, edges, types, max_speeds, distances, labels, coords);
     fclose(pfile);
 
+    //WYPISZ ROZMIAR GRAFU I ORIENTACYJNĄ INFORMACJĘ DOT. ETYKIET
+    printf("Nodes: %lu, Edges: &lu\n", labels.size(), edges.size());
+    int zeros=0; vector<int> nozero;
+    for(int i=0; i<labels.size(); ++i) {
+        if(labels[i]==0) ++zeros;
+        else nozero.push_back(labels[i]);
+    }
+    printf("Labelled zero: %d\n",zeros);
+    sort(zeros.begin(),zeros.end());
+    int minlab=labels.size()+1;
+    int maxlab=0;
+    if(nozeros.size()==0) printf("No other labels.\n");
+    else {
+        if(nozeros.size()==1) {
+            minlab=1;
+            maxlab=1;
+        }
+        else {
+            int curlab=0;
+            for(int i=1; i < nozeros.size(); ++i) {
+                if(nozeros[i]==nozeros[i-1]) curlab++;
+                else {
+                    if(minlab > curlab) minlab = curlab;
+                    if(maxlab < curlab) maxlab = curlab;
+                    curlab=0;
+                }
+            }
+            curlab++;
+            if(minlab > curlab) minlab = curlab;
+            if(maxlab < curlab) maxlab = curlab;
+       }
+    }
+    printf("Max label size: %d, Min label size: %d\n",maxlab,minlab);
+
     // Change distance to time (TODO add as program option)
     for (int i=0; i<m; i++) {
         distances[i] = distances[i] / max_speeds[i];
