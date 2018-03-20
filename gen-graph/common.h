@@ -18,7 +18,7 @@
 #define printfddd(...) \
             do { if (DEBUG>2) fprintf(stderr, ##__VA_ARGS__); } while (0)
 
-#define FOOT_SPEED 5 // Speed of walking on foot, used as default speed and to define max speed of edges to nodes with labels
+#define FOOT_SPEED 1.4 // Speed of walking on foot in m/s, used as default speed and to define max speed of edges to nodes with labels
 #define EARTH_RADIUS 6378137.0
 #define INVERSE_FLATTENING 298.257223563
 

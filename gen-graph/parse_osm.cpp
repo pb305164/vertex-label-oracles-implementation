@@ -95,7 +95,7 @@ float parse_max_speed(string s) {
         max_speed = stof(s)*(float)0.277778; // by default speed is given in km/h
     }
     return max_speed;
-};
+}
 
 
 // Parse all roads from osm file and fill graph nodes and edges
