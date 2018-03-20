@@ -26,7 +26,7 @@ vector<string> highway_filter = {
 
 
 // Cache all nodes from osm file for fast access later
-// This metod also merges different osm nodes that are in the same place into the same graph node
+// This function also merges different osm nodes that have the same coordinates into the same graph node
 void cache_nodes(pugi::xml_document &doc,
                  set<Node> &node_set,
                  unordered_mapB<int, Node> &all_nodes,
@@ -78,6 +78,26 @@ struct FindUnion {
 };
 
 
+//Parse max_speed string and change speed unit to m/s, max_speed format: number or number space unit
+float parse_max_speed(string s) {
+    float max_speed;
+    // Check if unit is specified
+    if (s.find(" ") != string::npos) {
+        // Read speed
+        max_speed = stof(s.substr(0, s.find(" ")));
+
+        // Check speed unit
+        string unit = s.substr(s.find(" ")+1, s.size());
+        if (unit == "mph") max_speed *= 0.44704;
+        else if (unit == "knots") max_speed *= 0.514444;
+        else max_speed *= 0.277778; // km/h
+    } else {
+        max_speed = stof(s)*(float)0.277778; // by default speed is given in km/h
+    }
+    return max_speed;
+};
+
+
 // Parse all roads from osm file and fill graph nodes and edges
 void read_graph_edges(pugi::xml_document &doc,
                       mpreal &max_max_speed,
@@ -103,7 +123,7 @@ void read_graph_edges(pugi::xml_document &doc,
         float max_speed = FOOT_SPEED;
         char type = (char)highway_filter.size();
         for (pugi::xml_node node = road.child("tag"); node; node = node.next_sibling("tag")) {
-            if (strcmp(node.attribute("k").value(), "maxspeed") == 0) max_speed = stof(node.attribute("v").value());
+            if (strcmp(node.attribute("k").value(), "maxspeed") == 0) max_speed = parse_max_speed(node.attribute("v").value());
             if (strcmp(node.attribute("k").value(), "highway") == 0) type = (char)(find(highway_filter.begin(), highway_filter.end(), node.attribute("v").value()) - highway_filter.begin());
             if (max_speed > max_max_speed) max_max_speed = max_speed;
         }
