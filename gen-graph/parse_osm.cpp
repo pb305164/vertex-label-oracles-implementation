@@ -7,7 +7,7 @@
 using namespace std;
 using mpfr::mpreal;
 
-vector<string> highway_filter = {
+const vector<string> highway_filter = {
         "motorway",
         "motorway_link",
         "trunk",
@@ -24,14 +24,22 @@ vector<string> highway_filter = {
         "living_street",
 };
 
+const vector<string> label_filter = {
+        "shop",
+        "amenity",
+        "emergency",
+        "tourism",
+        "sport",
+};
+
 
 // Cache all nodes from osm file for fast access later
 // This function also merges different osm nodes that have the same coordinates into the same graph node
 void cache_nodes(pugi::xml_document &doc,
-                 set<Node> &node_set,
                  unordered_mapB<int, Node> &all_nodes,
                  unordered_mapB<llu, int> &osm_id_to_new_id)
 {
+    set<Node> node_set;
     for (pugi::xml_node node = doc.child("osm").child("node"); node; node = node.next_sibling("node")) {
         llu osm_id = stoull(node.attribute("id").value());
         mpreal lat = node.attribute("lat").value();
@@ -92,9 +100,22 @@ float parse_max_speed(string s) {
         else if (unit == "knots") max_speed *= 0.514444;
         else max_speed *= 0.277778; // km/h
     } else {
-        max_speed = stof(s)*(float)0.277778; // by default speed is given in km/h
+        if (s == "none") max_speed = 55.5556; // if there is no speed limit assume 200km/h
+        else if (s == "walk") max_speed = FOOT_SPEED;
+        else max_speed = stof(s)*(float)0.277778; // by default speed is given in km/h
     }
     return max_speed;
+}
+
+
+// Return default speed for given road type in m/s
+float get_default_max_speed(char type) {
+    if (type == 0) return 38.8889; // motorway 140 km/h
+    if (type == 2) return 33.3333; // trunk  120 km/h
+    if (type == 4 || type == 6 || type == 8) return 25; // primary, secondary and tertiary  90 km/h
+    if (type == 13) return 8.33333; // living_street 30 km/h
+    if (type == 12) return 5.55556; //sevice 20 km/h
+    return 13.8889; // all other (links and residential)  50km/h
 }
 
 
@@ -106,27 +127,30 @@ void read_graph_edges(pugi::xml_document &doc,
                       unordered_mapB<int, set<Edge> > &edges,
                       unordered_mapB<llu, int> &osm_id_to_new_id)
 {
-    // Select roads
+    // Construct road query
     string road_query = "/osm/way[tag[@k='highway' and (";
     road_query += "@v='"+highway_filter.front()+"' ";
     for (auto it = highway_filter.begin()+1; it != highway_filter.end(); ++it) {
         road_query += "or @v='" + *it + "' ";
     }
     road_query += ")]]";
+
+    // Select all roads
     pugi::xpath_node_set roads = doc.select_nodes(road_query.c_str());
     int max_node_id=-1;
 
     // Iterate though roads, add nodes and edges to graph
-    for (pugi::xpath_node_set::const_iterator it=roads.begin(); it!=roads.end(); ++it) {
+    for (pugi::xpath_node_set::const_iterator it = roads.begin(); it != roads.end(); ++it) {
         // Read road attributes (Road is described as ordered list of nodes so it is represented as multiple edges in graph)
         pugi::xml_node road = it->node();
-        float max_speed = FOOT_SPEED;
+        float max_speed = 0;
         char type = (char)highway_filter.size();
         for (pugi::xml_node node = road.child("tag"); node; node = node.next_sibling("tag")) {
             if (strcmp(node.attribute("k").value(), "maxspeed") == 0) max_speed = parse_max_speed(node.attribute("v").value());
             if (strcmp(node.attribute("k").value(), "highway") == 0) type = (char)(find(highway_filter.begin(), highway_filter.end(), node.attribute("v").value()) - highway_filter.begin());
             if (max_speed > max_max_speed) max_max_speed = max_speed;
         }
+        if (max_speed == 0) max_speed = get_default_max_speed(type);
 
         // Add edges which make up the road
         int prev_node = -1;
@@ -171,6 +195,7 @@ void read_graph_edges(pugi::xml_document &doc,
 // Find osm nodes which represent points of interest and add them to the graph with proper labels
 // Labeled nodes are connected by an edge to the nearest other node (distance = straight line, max_speed = FOOT_SPEED)
 void add_labels(pugi::xml_document &doc,
+                unordered_mapB<int, Node> &all_nodes,
                 unordered_mapB<int, Node> &nodes,
                 unordered_mapB<int, set<Edge> > &edges,
                 unordered_mapB<llu, int> &osm_id_to_new_id)
@@ -215,8 +240,8 @@ void add_labels(pugi::xml_document &doc,
             pair<Node, mpreal> near = kdtree.find_nearest(poi_lat, poi_lon);
             if (nodes.find(poi_id) == nodes.end()) {
                 nodes[poi_id] = Node(poi_lat, poi_lon, poi_id, lbl, osm_id);
-                edges[poi_id].insert(Edge(poi_id, near.first.id, FOOT_SPEED, highway_filter.size(), near.second));
-                edges[near.first.id].insert(Edge(near.first.id, poi_id, FOOT_SPEED, highway_filter.size(), near.second));
+                edges[poi_id].insert(Edge(poi_id, near.first.id, FOOT_SPEED, (char)highway_filter.size(), near.second));
+                edges[near.first.id].insert(Edge(near.first.id, poi_id, FOOT_SPEED, (char)highway_filter.size(), near.second));
             } else {
                 // Edit if allready exists
                 nodes[poi_id].label = lbl;
@@ -301,7 +326,6 @@ tuple<unordered_mapB<int, Node>, unordered_mapB<int, set<Edge>>, mpreal> read_gr
         bool _merge_edges=false,
         bool _add_labels=true)
 {
-    set<Node> node_set;
     unordered_mapB<llu, int> osm_id_to_new_id;
     unordered_mapB<int, Node> all_nodes; // All osm nodes
 
@@ -319,9 +343,9 @@ tuple<unordered_mapB<int, Node>, unordered_mapB<int, set<Edge>>, mpreal> read_gr
         exit(1);
     }
 
-    cache_nodes(doc, node_set, all_nodes, osm_id_to_new_id);
+    cache_nodes(doc, all_nodes, osm_id_to_new_id);
     read_graph_edges(doc, max_max_speed, nodes, all_nodes, edges, osm_id_to_new_id);
-    if (_add_labels) add_labels(doc, nodes, edges, osm_id_to_new_id);
+    if (_add_labels) add_labels(doc, all_nodes, nodes, edges, osm_id_to_new_id);
     if (_merge_edges) merge_edges(nodes, edges);
     remap_ids(nodes, edges);
     return make_tuple(nodes, edges, max_max_speed);
