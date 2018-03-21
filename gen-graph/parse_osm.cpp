@@ -1,5 +1,6 @@
 #include <set>
 #include <vector>
+#include <algorithm>
 #include "common.h"
 #include "KDTree.h"
 #include "pugixml.hpp"
@@ -27,34 +28,102 @@ const vector<string> highway_filter = {
 const vector<string> label_filter = {
         "shop",
         "amenity",
-        "emergency",
         "tourism",
         "sport",
+        "leisure",
+        "historic",
+        "emergency",
+        "public_transport",
 };
 
 
-// Cache all nodes from osm file for fast access later
+// Construct query used to select all roads from osm
+string get_road_query() {
+    string road_query = "/osm/way[tag[@k='highway' and (";
+    road_query += "@v='"+highway_filter.front()+"' ";
+    for (auto it = highway_filter.begin()+1; it != highway_filter.end(); ++it) {
+        road_query += "or @v='" + *it + "' ";
+    }
+    road_query += ")]]";
+    return road_query;
+}
+
+
+// Construct query used to select all nodes with labels from osm
+string get_label_query() {
+    // Search for all nodes with tag defined in label_filter
+    string label_query = "/osm/node[tag[";
+    label_query += "@k='"+label_filter.front()+"' ";
+    for (auto it = label_filter.begin()+1; it != label_filter.end(); ++it) {
+        label_query += "or @k='" + *it + "' ";
+    }
+    label_query += "]]";
+
+    // Search not only for nodes but also for ways
+    label_query +=  "|/osm/way[tag["; // And all ways with tag defined in label_filter
+    label_query += "@k='"+label_filter.front()+"' ";
+    for (auto it = label_filter.begin()+1; it != label_filter.end(); ++it) {
+        label_query += "or @k='" + *it + "' ";
+    }
+    label_query += "]]";
+    return label_query;
+}
+
+
+// Cache all nodes that will be added to graph from osm file for fast access later
 // This function also merges different osm nodes that have the same coordinates into the same graph node
 void cache_nodes(pugi::xml_document &doc,
-                 unordered_mapB<int, Node> &all_nodes,
+                 unordered_mapB<int, Node> &nodes,
                  unordered_mapB<llu, int> &osm_id_to_new_id)
 {
+    set<llu> nodes_to_cache;
+    // Get all nodes ids used in roads
+    string query = get_road_query();
+    pugi::xpath_node_set xpath = doc.select_nodes(query.c_str());
+
+    for (pugi::xpath_node_set::const_iterator it = xpath.begin(); it != xpath.end(); ++it) {
+        pugi::xml_node road = it->node();
+        for (pugi::xml_node node = road.child("nd"); node; node = node.next_sibling("nd")) {
+            nodes_to_cache.insert(stoull(node.attribute("ref").value()));
+        }
+    }
+
+    // Get all nodes ids with labels
+    query = get_label_query();
+    xpath = doc.select_nodes(query.c_str());
+
+    for (pugi::xpath_node_set::const_iterator it = xpath.begin(); it != xpath.end(); ++it) {
+        pugi::xml_node poi = it->node();
+
+        // If poi is defined by osm node cache this node
+        if (strcmp(poi.name(), "node") == 0) {
+            nodes_to_cache.insert(stoull(poi.attribute("id").value()));
+        } else {
+            // If poi is defined by osm way cache first node of way as poi
+            pugi::xml_node node = poi.child("nd");
+            nodes_to_cache.insert(stoull(node.attribute("ref").value()));
+        }
+    }
+
+    // Cache selected nodes
     set<Node> node_set;
     for (pugi::xml_node node = doc.child("osm").child("node"); node; node = node.next_sibling("node")) {
         llu osm_id = stoull(node.attribute("id").value());
-        mpreal lat = node.attribute("lat").value();
-        mpreal lon = node.attribute("lon").value();
+        if (nodes_to_cache.find(osm_id) != nodes_to_cache.end()) {
+            mpreal lat = node.attribute("lat").value();
+            mpreal lon = node.attribute("lon").value();
 
-        Node n = Node(lat, lon, (int)node_set.size(), -1, osm_id);
-        auto it = node_set.find(n);
-        if (it != node_set.end()) {
-            // Merge different osm nodes from the same place into the same graph node
-            n = *it;
-        } else {
-            node_set.insert(n);
-            all_nodes[n.id] = n;
+            Node n = Node(lat, lon, (int) node_set.size(), -1, osm_id);
+            auto it = node_set.find(n);
+            if (it != node_set.end()) {
+                // Merging osm nodes which are at the same place into the same graph node (same new id)
+                n = *it;
+            } else {
+                node_set.insert(n);
+                nodes[n.id] = n;
+            }
+            osm_id_to_new_id[osm_id] = n.id;
         }
-        osm_id_to_new_id[osm_id] = n.id;
     }
 }
 
@@ -127,13 +196,7 @@ void read_graph_edges(pugi::xml_document &doc,
                       unordered_mapB<int, set<Edge> > &edges,
                       unordered_mapB<llu, int> &osm_id_to_new_id)
 {
-    // Construct road query
-    string road_query = "/osm/way[tag[@k='highway' and (";
-    road_query += "@v='"+highway_filter.front()+"' ";
-    for (auto it = highway_filter.begin()+1; it != highway_filter.end(); ++it) {
-        road_query += "or @v='" + *it + "' ";
-    }
-    road_query += ")]]";
+    string road_query = get_road_query();
 
     // Select all roads
     pugi::xpath_node_set roads = doc.select_nodes(road_query.c_str());
@@ -207,27 +270,43 @@ void add_labels(pugi::xml_document &doc,
     }
     KDTree kdtree = KDTree::create(vnodes);
 
-    // Go through all points of interests in osm file, Add new node and connect it to nearest or edit existing node
+    string label_query = get_label_query();
+
+    // Go through all points of interests in osm file, Add new node and connect it to nearest road node or edit existing node
     unordered_mapB<string, int> labels;
-    pugi::xpath_node_set pois = doc.select_nodes("/osm/node[tag[@k='shop' or @k='amenity']]");
+    pugi::xpath_node_set pois = doc.select_nodes(label_query.c_str());
     for (pugi::xpath_node_set::const_iterator it=pois.begin(); it!=pois.end(); ++it) {
         // Read attributes of the point of interest
         pugi::xml_node poi = it->node();
+        mpreal poi_lat = 0, poi_lon = 0;
         llu osm_id = stoull(poi.attribute("id").value());
-        int poi_id = get_new_id(osm_id_to_new_id, osm_id);
-        mpreal poi_lat = poi.attribute("lat").value();
-        mpreal poi_lon = poi.attribute("lon").value();
+        int poi_id;
+
+        // If poi is defined by osm node
+        if (strcmp(poi.name(), "node") == 0) {
+            poi_id = get_new_id(osm_id_to_new_id, osm_id);
+            poi_lat = poi.attribute("lat").value();
+            poi_lon = poi.attribute("lon").value();
+            assert(poi_lat == all_nodes[poi_id].lat);
+            assert(poi_lon == all_nodes[poi_id].lon);
+        } else {
+            // If poi is defined by osm way select first node of way as poi
+            pugi::xml_node node = poi.child("nd");
+            poi_id = get_new_id(osm_id_to_new_id, stoull(node.attribute("ref").value()));
+            poi_lat = all_nodes[poi_id].lat;
+            poi_lon = all_nodes[poi_id].lon;
+        }
         pugi::xml_node tag = poi.child("tag");
 
-        // Assign tag
-        while (tag && strcmp(tag.attribute("k").value(), "shop") != 0 && strcmp(tag.attribute("k").value(), "amenity") != 0) {
+        // Find tag (way/node can contain multiple matching tags first one is selected)
+        while (tag && find(label_filter.begin(), label_filter.end(), tag.attribute("k").value()) == label_filter.end()) {
             tag = tag.next_sibling("tag");
         }
         assert(tag && "Tag should be found");
 
         // Add it to the graph
         if (tag) {
-            string slbl = tag.attribute("v").value();
+            string slbl = tag.attribute("k").value() + str(" ") + tag.attribute("v").value();
             int lbl;
             if (labels.find(slbl) != labels.end()) {
                 lbl = labels[slbl];
@@ -243,8 +322,10 @@ void add_labels(pugi::xml_document &doc,
                 edges[poi_id].insert(Edge(poi_id, near.first.id, FOOT_SPEED, (char)highway_filter.size(), near.second));
                 edges[near.first.id].insert(Edge(near.first.id, poi_id, FOOT_SPEED, (char)highway_filter.size(), near.second));
             } else {
-                // Edit if allready exists
-                nodes[poi_id].label = lbl;
+                // Edit if node already exists and doesn't have label assigned
+                if (nodes[poi_id].label == -1) {
+                    nodes[poi_id].label = lbl;
+                }
             }
         }
     }
