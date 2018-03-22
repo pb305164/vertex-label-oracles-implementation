@@ -46,14 +46,14 @@ vector<pair<int, int> > get_kuratowski(unordered_mapB<int, Node> &nodes, unorder
 }
 
 
-// Remove edges with distance lesser than min_dist, merge incidental nodes
-void merge_nodes(unordered_mapB<int, Node> &nodes, unordered_mapB<int, set<Edge>> &edges, mpreal min_dist) {
+// Remove edges with travel time lesser than min_tavel_time, merge incidental nodes
+void merge_nodes(unordered_mapB<int, Node> &nodes, unordered_mapB<int, set<Edge>> &edges, mpreal min_travel_time) {
     int max_id = (int)nodes.size();
     for (int i = 0; i < max_id; i++) {
         if (edges.find(i) != edges.end()) {
             for (auto it = edges[i].begin(); it != edges[i].end(); it++) {
                 Edge e = *it;
-                if (e.distance < min_dist) {
+                if (e.distance / e.max_speed < min_travel_time) {
                     vector<Edge> vedges;
 
                     // Remove all edges from source
@@ -92,8 +92,8 @@ void merge_nodes(unordered_mapB<int, Node> &nodes, unordered_mapB<int, set<Edge>
                         nodes.erase(e.dest);
                     }
 
-                    // Sort edges by distance
-                    auto sort_cmp = [](const Edge &e1, const Edge &e2) { return e1.distance < e2.distance; };
+                    // Sort edges by travel time
+                    auto sort_cmp = [](const Edge &e1, const Edge &e2) { return e1.distance / e1.max_speed < e2.distance / e2.max_speed; };
                     sort(vedges.begin(), vedges.end(), sort_cmp);
 
                     // Add edges back
@@ -105,7 +105,7 @@ void merge_nodes(unordered_mapB<int, Node> &nodes, unordered_mapB<int, set<Edge>
                                          ((edge.distance / edge.max_speed) + (e.distance / e.max_speed));
                         edge.distance += e.distance;
 
-                        // Ignore if edge already exists, shorter will be added first
+                        // Ignore if edge already exists, shorter travel time will be added first
                         if (edge.source != new_node_id) {
                             edge.source = new_node_id;
                         }
@@ -114,7 +114,7 @@ void merge_nodes(unordered_mapB<int, Node> &nodes, unordered_mapB<int, set<Edge>
                         edges[edge.source].insert(edge);
                     }
 
-                    // After altering edges need to start again or move to next node, also it becomes invalid
+                    // After altering edges need to start again or move to next node, also iterator it becomes invalid
                     break;
                 }
             }
@@ -125,15 +125,15 @@ void merge_nodes(unordered_mapB<int, Node> &nodes, unordered_mapB<int, set<Edge>
 
 int main(int argc, char* argv[]) {
     if (argc != 2 && argc != 3) {
-        fprintf(stderr, "Usage ./gen-graph path_to_osm_file [node merge distance]\n");
+        fprintf(stderr, "Usage ./gen-graph path_to_osm_file [min travel time between nodes in s]\n");
         return 1;
     }
 
     // Set flags/values for desired effects (TODO add program options)
     bool merge_edges = false, add_labels = true, planarize = true;
-    //  Minimal distance of edge for it not to be removed, 0 -> no edges are removed
-    mpreal min_dist = 0;
-    if (argc == 3) min_dist = atof(argv[2]);
+    // Removes edges with travel time less then min_time (in seconds), 0 -> no edges are removed
+    mpreal min_travel_time = 0;
+    if (argc == 3) min_travel_time = atof(argv[2]);
 
     mpfr::mpreal::set_default_prec(512);
     mpfr::mpreal::set_default_rnd(MPFR_RNDN);
@@ -158,8 +158,8 @@ int main(int argc, char* argv[]) {
 //    check_graph(nodes, edges);
 
     // Merge close nodes, remove very short edges
-    if (min_dist > 0) {
-        merge_nodes(nodes, edges, min_dist);
+    if (min_travel_time > 0) {
+        merge_nodes(nodes, edges, min_travel_time);
         remap_ids(nodes, edges);
     }
 //    check_graph(nodes, edges);
