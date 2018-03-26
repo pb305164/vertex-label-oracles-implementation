@@ -26,11 +26,11 @@ PlanarOracle::initialize(
     embed(graph);
 
     pair<W, W> stretch(getStretch(graph));
-    W alpha = stretch.first;
-//    cerr << stretch.first << "  " << alpha << "  " << stretch.second << std::endl;
-
+    W alpha = min(stretch.second,max((W)36,stretch.first));
+    cout << "Stretch = " << stretch.first << " ... " << stretch.second << std::endl;
+    int rounds=0;
     while (alpha <= stretch.second) {
-	
+       rounds++;
 //	cerr << alpha << endl;
 
         vector< vector<int> > tmpParents, tmpMappings;
@@ -58,6 +58,7 @@ PlanarOracle::initialize(
 
         alpha *= 2;
     }
+    cout << "log(Stretch) = " << rounds << endl;
 }
 
 void
@@ -121,7 +122,7 @@ PlanarOracle::getAlphaFamily(
         layers[layerNum[i]].push_back(i);
     }
 
-    vector< pair< PlanarGraph, vector<int> > > result;
+    //vector< pair< PlanarGraph, vector<int> > > result;
     vector< int > vInd(g.vs().size(), -1);
     vector< int > eInd(g.es().size(), -1);
    
@@ -191,7 +192,7 @@ PlanarOracle::selectPathPortals(
     }
 */
     for (int j=0; j<(int)paths.size(); ++j) {
-        pair<int, int> prevV(-1, -1);
+//        pair<int, int> prevV(-1, -1);
         W dist = infinity;
         for (int k=0; k<(int)paths[j].size()-1; ++k) {
             int v = paths[j][k].first;

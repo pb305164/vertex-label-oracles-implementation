@@ -174,26 +174,26 @@ int main(int argc, char* argv[]) {
     fclose(pfile);
 
     //WYPISZ ROZMIAR GRAFU I ORIENTACYJNĄ INFORMACJĘ DOT. ETYKIET
-    printf("Nodes: %lu, Edges: &lu\n", labels.size(), edges.size());
+    printf("Nodes: %lu, Edges: %lu\n", labels.size(), edges.size());
     int zeros=0; vector<int> nozero;
     for(int i=0; i<labels.size(); ++i) {
         if(labels[i]==0) ++zeros;
         else nozero.push_back(labels[i]);
     }
     printf("Labelled zero: %d\n",zeros);
-    sort(zeros.begin(),zeros.end());
+    sort(nozero.begin(),nozero.end());
     int minlab=labels.size()+1;
     int maxlab=0;
-    if(nozeros.size()==0) printf("No other labels.\n");
+    if(nozero.size()==0) printf("No other labels.\n");
     else {
-        if(nozeros.size()==1) {
+        if(nozero.size()==1) {
             minlab=1;
             maxlab=1;
         }
         else {
             int curlab=0;
-            for(int i=1; i < nozeros.size(); ++i) {
-                if(nozeros[i]==nozeros[i-1]) curlab++;
+            for(int i=1; i < nozero.size(); ++i) {
+                if(nozero[i]==nozero[i-1]) curlab++;
                 else {
                     if(minlab > curlab) minlab = curlab;
                     if(maxlab < curlab) maxlab = curlab;
@@ -260,28 +260,28 @@ int main(int argc, char* argv[]) {
 
 
     std::chrono::duration<double, std::milli> build_time;
-    printf("FULL PLANAR\n");
+/*    printf("FULL PLANAR\n");
     {
         auto t1 = std::chrono::steady_clock::now();
-        FullPlanarOracle oracle(n, edges, distances, labels, EPS);
+        StaticPlanarOracle oracle(n, edges, distances, labels, EPS);
         auto t2 = std::chrono::steady_clock::now();
         build_time = t2 - t1;
         printf("Czas budowy: %lfs\n", build_time.count()/1000);
         run_all_vl_tests(oracle, tests);
         printf("\n\n");
-    }
+    } */
 
     printf("FULL FULL PLANAR\n");
     {
         auto t1 = std::chrono::steady_clock::now();
-        FullFullPlanarOracle oracle(n, edges, distances, labels, EPS);
+        StaticLLPlanarOracle oracle(n, edges, distances, labels, EPS);
         auto t2 = std::chrono::steady_clock::now();
         build_time = t2 - t1;
         printf("Czas budowy: %lfs\n", build_time.count()/1000);
         run_all_ll_tests(oracle, tests);
         printf("\n\n");
     }
-
+/*
     printf("OSRM Oracle\n");
     {
         auto t1 = std::chrono::steady_clock::now();
@@ -360,4 +360,5 @@ int main(int argc, char* argv[]) {
         run_all_tests(oracle, tests);
         printf("\n\n");
     }
+*/
 }
