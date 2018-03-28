@@ -163,15 +163,22 @@ float parse_max_speed(string s) {
         // Read speed
         max_speed = stof(s.substr(0, s.find(" ")));
 
-        // Check speed unit
+        // Check speed unit and convert to m/s
         string unit = s.substr(s.find(" ")+1, s.size());
         if (unit == "mph") max_speed *= 0.44704;
         else if (unit == "knots") max_speed *= 0.514444;
         else max_speed *= 0.277778; // km/h
     } else {
-        if (s == "none") max_speed = 55.5556; // if there is no speed limit assume 200km/h
+        if (s == "none") max_speed = 55.5556; // If there is no speed limit assume 200km/h
         else if (s == "walk") max_speed = FOOT_SPEED;
-        else max_speed = stof(s)*(float)0.277778; // by default speed is given in km/h
+        else if (s == "signals") max_speed = 0; // Max speed is defined by dynamic signals, assume default speed depending on road type
+        else {
+            try {
+                max_speed = stof(s)*(float)0.277778; // By default speed is given in km/h
+            } catch (invalid_argument &e) { // Speed also can be specified as nations standard speed in urban area (eg "DE:urban")
+                max_speed = 0;              // in that case just assume default speed depending on road type
+            }
+        }
     }
     return max_speed;
 }
