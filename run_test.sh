@@ -15,9 +15,10 @@ cd ..
 
 fi
 
-rm $city.log
+if [ "$2" != gen ]; then
 for ((i=1; i<=12; i++)); do
   /usr/bin/time -v \
     ./oracles/run_tests $i ./tests/$city.osrm ./tests/$city.graph ./tests/$city.test \
     2> >(grep "Maximum resident") | tee -a $city.log
 done
+fi

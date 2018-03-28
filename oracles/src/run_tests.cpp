@@ -399,6 +399,7 @@ int main(int argc, char* argv[]) {
             run_all_tests(oracle, tests);
             printf("\n\n");
         }
+        break;
     case 12:
         printf("DIJKSTRA\n");
         {
