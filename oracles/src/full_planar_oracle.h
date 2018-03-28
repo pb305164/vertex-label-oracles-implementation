@@ -186,7 +186,7 @@ class StaticPlanarOracle : public PlanarOracle {
     struct Vertex {
         int label;
         int portal_pos;
-        vector< pair<W, int> > portals; //, rportals;
+        vector< pair< int, W > > portals;
     };
     vector< Vertex > vertices;
 
@@ -229,10 +229,8 @@ class StaticPlanarOracle : public PlanarOracle {
                     portals[pos].N_l[vertices[v].label]=make_pair(distances[j],v);
                 if(distances[j] < portals[pos].N_l[ vertices[v].label ].first)
                     portals[pos].N_l[ vertices[v].label ]=make_pair(distances[j],v);
-                //vertices[v].rportals.push_back(make_pair(distances[j], portals.size()-1));
                 if (source[j]) {
-                    vertices[v].portals.push_back(
-                                make_pair(distances[j], pos));
+                   vertices[v].portals.push_back(make_pair(pos,distances[j]));
                 }
             }
         }
@@ -253,7 +251,16 @@ public:
             vertices[i].portal_pos = -1;
         }
         initialize(n, edges, weights, eps);
-
+        //scalanie portali w wierzcholkach
+        for(auto &v : vertices) {
+            sort(v.portals.begin(),v.portals.end());
+            for( int i=1; i < v.portals.size(); ++i )
+                if(v.portals[i].first==v.portals[i-1].first)
+                    v.portals[i].second=v.portals[i-1].second;
+            auto it = unique(v.portals.begin(), v.portals.end());
+            v.portals.resize( distance(v.portals.begin(),it) );
+        }
+        // koniec scalania
     long long sum = 0;
         for (auto &v: vertices) {
         sum += (int)v.portals.size();
@@ -272,10 +279,10 @@ public:
     pair<W, int> distanceToLabel(int v, int l) {
         pair<W, int> result(infinity, -1);
         for (auto &p: vertices[v].portals) {
-            if( portals[p.second].N_l.find(l)!=portals[p.second].N_l.end() )
+            if( portals[p.first].N_l.find(l)!=portals[p.first].N_l.end() )
             result = min(result,
-                         make_pair(portals[p.second].N_l[l].first+p.first,
-                                   portals[p.second].N_l[l].second));
+                         make_pair(portals[p.first].N_l[l].first+p.second,
+                                   portals[p.first].N_l[l].second));
         }
         return result;
     }
@@ -342,7 +349,7 @@ class FullFullPlanarOracle : public PlanarOracle {
                 if (distances[j] == infinity) continue;
 
                 portals.back().N_l[ vertices[v].label ].insert(make_pair(distances[j], v));
-		vertices[v].portals.push_back(make_pair(distances[j], portals.size()-1));
+                vertices[v].portals.push_back(make_pair(distances[j], portals.size()-1));
             }
         }
     }
@@ -503,8 +510,8 @@ class StaticLLPlanarOracle : public PlanarOracle {
     struct Vertex {
         int label;
         int portal_pos;
-        vector< pair<W, int> > portals;
-        vector< pair<W, int> > dist;
+        vector< pair<int, W> > portals;
+        vector< pair<int, W> > dist;
     };
     vector< Vertex > vertices;
 
@@ -537,7 +544,7 @@ class StaticLLPlanarOracle : public PlanarOracle {
                 int uu = mapping[u];
                 if (uu == -1) continue;
                 if (distances[u] == infinity) continue;
-                vertices[uu].dist.push_back(make_pair(distances[u], vv));
+                vertices[uu].dist.push_back(make_pair(vv,distances[u]));
             }
         }
     }
@@ -567,7 +574,7 @@ class StaticLLPlanarOracle : public PlanarOracle {
                     portals[pos].N_l[vertices[v].label]=make_pair(distances[j],v);
                 if(portals[pos].N_l[vertices[v].label].first > distances[j])
                     portals[pos].N_l[vertices[v].label]=make_pair(distances[j],v);
-                vertices[v].portals.push_back(make_pair(distances[j], pos));
+                vertices[v].portals.push_back(make_pair(pos, distances[j]));
             }
         }
     }
@@ -576,15 +583,27 @@ class StaticLLPlanarOracle : public PlanarOracle {
     void initializeStructures() {
         for (auto &V: vertices) {
             sort(V.dist.begin(), V.dist.end());
+            for( int i=1; i < V.dist.size(); ++i )
+                if(V.dist[i].first==V.dist[i-1].first)
+                    V.dist[i].second=V.dist[i-1].second;
             auto it = unique(V.dist.begin(), V.dist.end());
             V.dist.resize(it - V.dist.begin());
+        }
+
+        for(auto &v : vertices) {
+            sort(v.portals.begin(),v.portals.end());
+            for( int i=1; i < v.portals.size(); ++i )
+                if(v.portals[i].first==v.portals[i-1].first)
+                    v.portals[i].second=v.portals[i-1].second;
+            auto it = unique(v.portals.begin(), v.portals.end());
+            v.portals.resize( distance(v.portals.begin(),it) );
         }
 
         for (int v=0; v<(int)vertices.size(); ++v) {
             int l = vertices[v].label;
             for (auto &curr: vertices[v].dist) {
-                W du = curr.first;
-                int u = curr.second;
+                W du = curr.second;
+                int u = curr.first;
                 int ll = vertices[u].label;
                 if(labels[l].S_v.find(u)==labels[l].S_v.end())
                     labels[l].S_v[u]=make_pair(du,v);
@@ -600,6 +619,8 @@ class StaticLLPlanarOracle : public PlanarOracle {
                 }
             }
         }
+
+
     }
 
 public:
@@ -636,11 +657,11 @@ public:
     pair<W, int> labelToLabel(int v, int l) {
         pair<W, int> result(infinity, -1);
         for (auto &p: vertices[v].portals) {
-            if(portals[p.second].N_l.find(l)==portals[p.second].N_l.end()) continue;
+            if(portals[p.first].N_l.find(l)==portals[p.first].N_l.end()) continue;
             result = min(result,
                          make_pair(
-                             p.first+portals[p.second].N_l[l].first,
-                             portals[p.second].N_l[l].second));
+                             p.second+portals[p.first].N_l[l].first,
+                             portals[p.first].N_l[l].second));
         }
         if (labels[l].S_v.find(v)!=labels[l].S_v.end()) {
             result = min(result,

@@ -157,10 +157,16 @@ int main(int argc, char* argv[]) {
     int n, m, max_label;
     W EPS = 1.;
 
-    if (argc != 4 && argc != 5) {
-        fprintf(stderr, "Usage: %s osrm-file generated-graph generated-test [(int)epsilon for planar oracle (default = 1)]>\n", argv[0]);
+
+    if (argc != 5 && argc != 6) {
+        fprintf(stderr, "Usage: %s algorithm-number osrm-file generated-graph generated-test [(int)epsilon for planar oracle (default = 1)]>\n", argv[0]);
         return 1;
     }
+
+    int alg_num=atoi(argv[1]);
+    argc--;
+    argv++;
+
     // Eps in planar oracles
     if (argc == 5) EPS = stof(argv[4]);
 
@@ -186,25 +192,19 @@ int main(int argc, char* argv[]) {
     int maxlab=0;
     if(nozero.size()==0) printf("No other labels.\n");
     else {
-        if(nozero.size()==1) {
-            minlab=1;
-            maxlab=1;
+        int curlab=1;
+        for(int i=1; i < nozero.size(); ++i) {
+            if(nozero[i]==nozero[i-1]) curlab++;
+            else {
+               if(minlab > curlab) minlab = curlab;
+               if(maxlab < curlab) maxlab = curlab;
+               curlab=1;
+               }
+           }
+        if(minlab > curlab) minlab = curlab;
+        if(maxlab < curlab) maxlab = curlab;
         }
-        else {
-            int curlab=0;
-            for(int i=1; i < nozero.size(); ++i) {
-                if(nozero[i]==nozero[i-1]) curlab++;
-                else {
-                    if(minlab > curlab) minlab = curlab;
-                    if(maxlab < curlab) maxlab = curlab;
-                    curlab=0;
-                }
-            }
-            curlab++;
-            if(minlab > curlab) minlab = curlab;
-            if(maxlab < curlab) maxlab = curlab;
-       }
-    }
+
     printf("Max label size: %d, Min label size: %d\n",maxlab,minlab);
 
     // Change distance to time (TODO add as program option)
@@ -260,105 +260,159 @@ int main(int argc, char* argv[]) {
 
 
     std::chrono::duration<double, std::milli> build_time;
-/*    printf("FULL PLANAR\n");
-    {
-        auto t1 = std::chrono::steady_clock::now();
-        StaticPlanarOracle oracle(n, edges, distances, labels, EPS);
-        auto t2 = std::chrono::steady_clock::now();
-        build_time = t2 - t1;
-        printf("Czas budowy: %lfs\n", build_time.count()/1000);
-        run_all_vl_tests(oracle, tests);
-        printf("\n\n");
-    } */
 
-    printf("FULL FULL PLANAR\n");
-    {
-        auto t1 = std::chrono::steady_clock::now();
-        StaticLLPlanarOracle oracle(n, edges, distances, labels, EPS);
-        auto t2 = std::chrono::steady_clock::now();
-        build_time = t2 - t1;
-        printf("Czas budowy: %lfs\n", build_time.count()/1000);
-        run_all_ll_tests(oracle, tests);
-        printf("\n\n");
-    }
-/*
-    printf("OSRM Oracle\n");
-    {
-        auto t1 = std::chrono::steady_clock::now();
-        OsrmOracle oracle(argv[1], max_label, coords, labels);
-        auto t2 = std::chrono::steady_clock::now();
-        build_time = t2 - t1;
-        printf("Czas budowy: %lfs\n", build_time.count()/1000);
-        run_all_tests(oracle, tests);
-        printf("\n\n");
+    switch (alg_num) {
+    case 1:
+        printf("FULL PLANAR, EPS=1\n");
+        {
+            auto t1 = std::chrono::steady_clock::now();
+            StaticPlanarOracle oracle(n, edges, distances, labels, EPS);
+            auto t2 = std::chrono::steady_clock::now();
+            build_time = t2 - t1;
+            printf("Czas budowy: %lfs\n", build_time.count()/1000);
+            run_all_vl_tests(oracle, tests);
+            printf("\n\n");
+        }
+        break;
+    case 2:
+        printf("FULL PLANAR, EPS=4\n");
+        {
+            EPS=4.;
+            auto t1 = std::chrono::steady_clock::now();
+            StaticPlanarOracle oracle(n, edges, distances, labels, EPS);
+            auto t2 = std::chrono::steady_clock::now();
+            build_time = t2 - t1;
+            printf("Czas budowy: %lfs\n", build_time.count()/1000);
+            run_all_vl_tests(oracle, tests);
+            printf("\n\n");
+        }
+        break;
+    case 3:
+        printf("FULL PLANAR, EPS=8\n");
+        {
+            EPS=8.;
+            auto t1 = std::chrono::steady_clock::now();
+            StaticPlanarOracle oracle(n, edges, distances, labels, EPS);
+            auto t2 = std::chrono::steady_clock::now();
+            build_time = t2 - t1;
+            printf("Czas budowy: %lfs\n", build_time.count()/1000);
+            run_all_vl_tests(oracle, tests);
+            printf("\n\n");
+        }
+        break;
+    case 4:
+        printf("FULL FULL PLANAR, EPS=1\n");
+        {
+            EPS=1.;
+            auto t1 = std::chrono::steady_clock::now();
+            StaticLLPlanarOracle oracle(n, edges, distances, labels, EPS);
+            auto t2 = std::chrono::steady_clock::now();
+            build_time = t2 - t1;
+            printf("Czas budowy: %lfs\n", build_time.count()/1000);
+            run_all_ll_tests(oracle, tests);
+            printf("\n\n");
+        }
+        break;
+    case 5:
+        printf("FULL FULL PLANAR, EPS=4\n");
+        {
+            EPS=4.;
+            auto t1 = std::chrono::steady_clock::now();
+            StaticLLPlanarOracle oracle(n, edges, distances, labels, EPS);
+            auto t2 = std::chrono::steady_clock::now();
+            build_time = t2 - t1;
+            printf("Czas budowy: %lfs\n", build_time.count()/1000);
+            run_all_ll_tests(oracle, tests);
+            printf("\n\n");
+        }
+        break;
+    case 6:
+        printf("OSRM Oracle\n");
+        {
+            auto t1 = std::chrono::steady_clock::now();
+            OsrmOracle oracle(argv[1], max_label, coords, labels);
+            auto t2 = std::chrono::steady_clock::now();
+            build_time = t2 - t1;
+            printf("Czas budowy: %lfs\n", build_time.count()/1000);
+            run_all_tests(oracle, tests);
+            printf("\n\n");
+        }
+        break;
+    case 7:
+        printf("5 APPROX QUERY\n");
+        {
+            auto t1 = std::chrono::steady_clock::now();
+            OracleGeneral5ApproxQuery oracle(n, edges, distances, labels);
+            auto t2 = std::chrono::steady_clock::now();
+            build_time = t2 - t1;
+            printf("Czas budowy: %lfs\n", build_time.count()/1000);
+            run_all_vl_tests(oracle, tests);
+            printf("\n\n");
+        }
+        break;
+    case 8:
+        printf("5 APPROX UPDATE\n");
+        {
+            auto t1 = std::chrono::steady_clock::now();
+            OracleGeneral5ApproxUpdate oracle(n, edges, distances, labels);
+            auto t2 = std::chrono::steady_clock::now();
+            build_time = t2 - t1;
+            printf("Czas budowy: %lfs\n", build_time.count()/1000);
+            run_all_vl_tests(oracle, tests);
+            printf("\n\n");
+        }
+        break;
+    case 9:
+        printf("3 APPROX LIGHT\n");
+        {
+            auto t1 = std::chrono::steady_clock::now();
+            OracleGeneral3ApproxLight oracle(n, edges, distances, labels);
+            auto t2 = std::chrono::steady_clock::now();
+            build_time = t2 - t1;
+            printf("Czas budowy: %lfs\n", build_time.count()/1000);
+            run_all_vl_tests(oracle, tests);
+            run_all_ll_tests(oracle, tests);
+            printf("\n\n");
+        }
+        break;
+    case 10:
+        printf("3 APPROX\n");
+        {
+            auto t1 = std::chrono::steady_clock::now();
+            OracleGeneral3Approx oracle(n, edges, distances, labels);
+            auto t2 = std::chrono::steady_clock::now();
+            build_time = t2 - t1;
+            printf("Czas budowy: %lfs\n", build_time.count()/1000);
+            run_all_vl_tests(oracle, tests);
+            run_all_ll_tests(oracle, tests);
+            printf("\n\n");
+        }
+        break;
+    case 11:
+        printf("ASTAR\n");
+        {
+            auto t1 = std::chrono::steady_clock::now();
+            AstarOracle oracle(n, m, max_label, max_speed, edges, distances, labels, coords);
+            auto t2 = std::chrono::steady_clock::now();
+            build_time = t2 - t1;
+            printf("Czas budowy: %lfs\n", build_time.count()/1000);
+            run_all_tests(oracle, tests);
+            printf("\n\n");
+        }
+    case 12:
+        printf("DIJKSTRA\n");
+        {
+            auto t1 = std::chrono::steady_clock::now();
+            DijkstraOracle oracle(n, m, max_label, edges, distances, labels);
+            auto t2 = std::chrono::steady_clock::now();
+            build_time = t2 - t1;
+            printf("Czas budowy: %lfs\n", build_time.count()/1000);
+            run_all_tests(oracle, tests);
+            printf("\n\n");
+        }
+        break;
+    default:
+        break;
     }
 
-    printf("5 APPROX QUERY\n");
-    {
-        auto t1 = std::chrono::steady_clock::now();
-        OracleGeneral5ApproxQuery oracle(n, edges, distances, labels);
-        auto t2 = std::chrono::steady_clock::now();
-        build_time = t2 - t1;
-        printf("Czas budowy: %lfs\n", build_time.count()/1000);
-        run_all_vl_tests(oracle, tests);
-        printf("\n\n");
-    }
-
-    printf("5 APPROX UPDATE\n");
-    {
-        auto t1 = std::chrono::steady_clock::now();
-        OracleGeneral5ApproxUpdate oracle(n, edges, distances, labels);
-        auto t2 = std::chrono::steady_clock::now();
-        build_time = t2 - t1;
-        printf("Czas budowy: %lfs\n", build_time.count()/1000);
-        run_all_vl_tests(oracle, tests);
-        printf("\n\n");
-    }
-
-    printf("3 APPROX LIGHT\n");
-    {
-        auto t1 = std::chrono::steady_clock::now();
-        OracleGeneral3ApproxLight oracle(n, edges, distances, labels);
-        auto t2 = std::chrono::steady_clock::now();
-        build_time = t2 - t1;
-        printf("Czas budowy: %lfs\n", build_time.count()/1000);
-        run_all_vl_tests(oracle, tests);
-        run_all_ll_tests(oracle, tests);
-        printf("\n\n");
-    }
-
-    printf("3 APPROX\n");
-    {
-        auto t1 = std::chrono::steady_clock::now();
-        OracleGeneral3Approx oracle(n, edges, distances, labels);
-        auto t2 = std::chrono::steady_clock::now();
-        build_time = t2 - t1;
-        printf("Czas budowy: %lfs\n", build_time.count()/1000);
-        run_all_vl_tests(oracle, tests);
-        run_all_ll_tests(oracle, tests);
-        printf("\n\n");
-    }
-
-    printf("ASTAR\n");
-    {
-        auto t1 = std::chrono::steady_clock::now();
-        AstarOracle oracle(n, m, max_label, max_speed, edges, distances, labels, coords);
-        auto t2 = std::chrono::steady_clock::now();
-        build_time = t2 - t1;
-        printf("Czas budowy: %lfs\n", build_time.count()/1000);
-        run_all_tests(oracle, tests);
-        printf("\n\n");
-    }
-
-    printf("DIJKSTRA\n");
-    {
-        auto t1 = std::chrono::steady_clock::now();
-        DijkstraOracle oracle(n, m, max_label, edges, distances, labels);
-        auto t2 = std::chrono::steady_clock::now();
-        build_time = t2 - t1;
-        printf("Czas budowy: %lfs\n", build_time.count()/1000);
-        run_all_tests(oracle, tests);
-        printf("\n\n");
-    }
-*/
 }
