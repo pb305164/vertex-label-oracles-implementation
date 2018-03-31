@@ -104,8 +104,9 @@ void edges_remove_old_add_new(unordered_mapB<int, set<Edge> > &edges, Node &new_
         if (new_node.lat != l.start.x) {
             ratio = (new_node.lat - l.start.x)/(l.end.x - l.start.x);
         } else {
-            ratio = (new_node.lon - l.start.y)/(l.end.y - new_node.lon);
+            ratio = (new_node.lon - l.start.y)/(l.end.y - l.start.y);
         }
+        assert(ratio > 0 && ratio < 1);
 
         //Remove edge from start to end
         edges[l.start_id].erase(old);
