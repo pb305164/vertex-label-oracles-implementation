@@ -270,6 +270,7 @@ int main(int argc, char* argv[]) {
             auto t2 = std::chrono::steady_clock::now();
             build_time = t2 - t1;
             printf("Czas budowy: %lfs\n", build_time.count()/1000);
+            run_all_vv_tests(oracle, tests);
             run_all_vl_tests(oracle, tests);
             printf("\n\n");
         }
@@ -283,6 +284,7 @@ int main(int argc, char* argv[]) {
             auto t2 = std::chrono::steady_clock::now();
             build_time = t2 - t1;
             printf("Czas budowy: %lfs\n", build_time.count()/1000);
+            run_all_vv_tests(oracle, tests);
             run_all_vl_tests(oracle, tests);
             printf("\n\n");
         }
@@ -296,6 +298,7 @@ int main(int argc, char* argv[]) {
             auto t2 = std::chrono::steady_clock::now();
             build_time = t2 - t1;
             printf("Czas budowy: %lfs\n", build_time.count()/1000);
+            run_all_vv_tests(oracle, tests);
             run_all_vl_tests(oracle, tests);
             printf("\n\n");
         }
@@ -309,7 +312,8 @@ int main(int argc, char* argv[]) {
             auto t2 = std::chrono::steady_clock::now();
             build_time = t2 - t1;
             printf("Czas budowy: %lfs\n", build_time.count()/1000);
-            run_all_ll_tests(oracle, tests);
+            run_all_tests(oracle,tests);
+            //run_all_ll_tests(oracle, tests);
             printf("\n\n");
         }
         break;
@@ -322,7 +326,7 @@ int main(int argc, char* argv[]) {
             auto t2 = std::chrono::steady_clock::now();
             build_time = t2 - t1;
             printf("Czas budowy: %lfs\n", build_time.count()/1000);
-            run_all_ll_tests(oracle, tests);
+            run_all_tests(oracle, tests);
             printf("\n\n");
         }
         break;

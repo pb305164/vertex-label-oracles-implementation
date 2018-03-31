@@ -276,6 +276,20 @@ public:
     }
 
     virtual
+    W distanceToVertex(int v, int w) {
+        int i=0, j=0;
+        while( i < vertices[v].portals.size() && j < vertices[w].portals.size() ) {
+            if( vertices[v].portals[i].first == vertices[w].portals[j].first )
+                break;
+            if(vertices[v].portals[i].first < vertices[w].portals[j].first) ++i;
+            else ++j;
+        }
+        if( i < vertices[v].portals.size() && j < vertices[w].portals.size() )
+            return vertices[v].portals[i].second+vertices[w].portals[j].second;
+        return infinity;
+    }
+
+    virtual
     pair<W, int> distanceToLabel(int v, int l) {
         pair<W, int> result(infinity, -1);
         for (auto &p: vertices[v].portals) {
@@ -651,6 +665,26 @@ public:
     virtual
     int labelOf(int v) {
         return vertices[v].label;
+    }
+
+    virtual
+    W distanceToVertex(int v, int w) {
+        int i=0, j=0;
+        W result=infinity;
+        while( i < vertices[v].portals.size() && j < vertices[w].portals.size() ) {
+            if( vertices[v].portals[i].first == vertices[w].portals[j].first )
+                break;
+            if(vertices[v].portals[i].first < vertices[w].portals[j].first) ++i;
+            else ++j;
+        }
+        if( i < vertices[v].portals.size() && j < vertices[w].portals.size() )
+            result = vertices[v].portals[i].second+vertices[w].portals[j].second;
+
+        // JEszcze szukanie w kawalku ....
+        auto it=lower_bound(vertices[v].dist.begin(),vertices[v].dist.end(),make_pair(w,(W)-1));
+        if(it!=vertices[v].dist.end() && it->first == w) result = min(result,it->second);
+
+        return result;
     }
 
     virtual
