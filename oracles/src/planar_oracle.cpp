@@ -27,6 +27,7 @@ PlanarOracle::initialize(
 
     pair<W, W> stretch(getStretch(graph));
     W alpha = min(stretch.second,max((W)60,stretch.first));
+    //W alpha=stretch.first;
     cout << "Stretch = " << stretch.first << " ... " << stretch.second << std::endl;
     int rounds=0;
     while (alpha <= stretch.second) {

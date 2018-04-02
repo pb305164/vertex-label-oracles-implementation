@@ -15,68 +15,78 @@ using std::map;
 
 
 template <class T>
-tuple<W, W, int, std::chrono::duration<double, std::milli> >  test_distanceToVertex(T &oracle, vector<pair<W, pair<int, int> > > &args)
+tuple<W, W, float, float, int, std::chrono::duration<double, std::milli> >  test_distanceToVertex(T &oracle, vector<pair<W, pair<int, int> > > &args)
 {
     std::chrono::duration<double, std::milli> t_sum = std::chrono::milliseconds::zero();
     W result;
-    W d_sum=0, d_res=0;
+    W d_sum=0, d_res=0; float d_ratio=0, max_ratio=0;
     int suc=0;
     for (auto p: args) {
         auto t1 = std::chrono::steady_clock::now();
         result = oracle.distanceToVertex(p.second.second, p.second.first);
         auto t2 = std::chrono::steady_clock::now();
         if (result != -1) {
+            if(p.first==0) p.first=0.0000001;
+            d_ratio += result/p.first;
+            max_ratio = max(max_ratio, result/p.first);
             d_res += result;
             d_sum += p.first;
             t_sum += t2 - t1;
             suc++;
         }
     }
-    return make_tuple(d_sum, d_res, suc, t_sum);
+    return make_tuple(d_sum, d_res, d_ratio, max_ratio, suc, t_sum);
 }
 
 
 template <class T>
-tuple<W, W, int, std::chrono::duration<double, std::milli> > test_distanceToLabel(T &oracle, vector<pair<W, pair<int, int> > > &args)
+tuple<W, W,float, float, int, std::chrono::duration<double, std::milli> > test_distanceToLabel(T &oracle, vector<pair<W, pair<int, int> > > &args)
 {
     std::chrono::duration<double, std::milli> t_sum = std::chrono::milliseconds::zero();
     pair<W, int> result;
-    W d_sum=0, d_res=0;
+    W d_sum=0, d_res=0; float d_ratio=0, max_ratio=0;
     int suc=0;
     for (auto p: args) {
         auto t1 = std::chrono::steady_clock::now();
         result = oracle.distanceToLabel(p.second.second, p.second.first);
         auto t2 = std::chrono::steady_clock::now();
         if (result.first != -1) {
+            if(p.first==0) p.first=0.0000001;
+            d_ratio += result.first/p.first;
+            max_ratio = max(max_ratio, result.first/p.first);
             d_res += result.first;
             d_sum += p.first;
             t_sum += t2 - t1;
             suc++;
         }
     }
-    return make_tuple(d_sum, d_res, suc, t_sum);
+    return make_tuple(d_sum, d_res, d_ratio, max_ratio, suc, t_sum);
 }
 
 
 template <class T>
-tuple<W, W, int, std::chrono::duration<double, std::milli> > test_distanceBetweenLabels(T &oracle, vector<pair<W, pair<int, int> > > &args)
+tuple<W, W, float, float, int, std::chrono::duration<double, std::milli> > test_distanceBetweenLabels(T &oracle, vector<pair<W, pair<int, int> > > &args)
 {
     std::chrono::duration<double, std::milli> t_sum = std::chrono::milliseconds::zero();
     pair<W, pair<int, int> > result;
     W d_sum=0, d_res=0;
+    float d_ratio=0, max_ratio=0;
     int suc=0;
     for (auto p: args) {
         auto t1 = std::chrono::steady_clock::now();
         result = oracle.distanceBetweenLabels(p.second.second, p.second.first);
         auto t2 = std::chrono::steady_clock::now();
         if (result.first != -1) {
+            if(p.first==0) p.first=0.0000001;
+            d_ratio += result.first/p.first;
+            max_ratio = max(max_ratio, result.first/p.first);
             d_res += result.first;
             d_sum += p.first;
             t_sum += t2 - t1;
             suc++;
         }
     }
-    return make_tuple(d_sum, d_res, suc, t_sum);
+    return make_tuple(d_sum, d_res, d_ratio , max_ratio , suc, t_sum);
 }
 
 
@@ -84,14 +94,16 @@ tuple<W, W, int, std::chrono::duration<double, std::milli> > test_distanceBetwee
 template <class T>
 std::chrono::duration<double, std::milli> run_tests(
         T &oracle, vector<pair<W, pair<int, int> > > &queries,
-        tuple<W, W, int, std::chrono::duration<double, std::milli> > (test_func)(T&, vector<pair<W, pair<int, int> > >&))
+        tuple<W, W, float, float, int, std::chrono::duration<double, std::milli> > (test_func)(T&, vector<pair<W, pair<int, int> > >&))
 {
-    W d_exp, d_got;
+    W d_exp, d_got; float d_ratio, max_ratio;
     std::chrono::duration<double, std::milli> sum;
     int suc;
-    tie(d_exp, d_got, suc, sum) = test_func(oracle, queries);
+    tie(d_exp, d_got, d_ratio, max_ratio, suc, sum) = test_func(oracle, queries);
     printf("Czasy testu suma: %lf  śr: %lf  poprawnie %d/%lu\n", sum.count(), sum.count()/suc, suc, queries.size());
     printf("Wyniki nadwyżka: %f  śr nad: %f  proc nad: %f  śr dł: %f\n\n", d_got-d_exp, (d_got-d_exp)/suc, d_got/d_exp, d_exp/suc);
+    printf("Avg ratio: %f  Max ratio: %f\n\n", d_ratio/suc, max_ratio);
+
     return sum;
 }
 

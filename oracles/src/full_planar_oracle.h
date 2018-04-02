@@ -278,15 +278,20 @@ public:
     virtual
     W distanceToVertex(int v, int w) {
         int i=0, j=0;
+        W result=infinity;
+
         while( i < vertices[v].portals.size() && j < vertices[w].portals.size() ) {
-            if( vertices[v].portals[i].first == vertices[w].portals[j].first )
-                break;
-            if(vertices[v].portals[i].first < vertices[w].portals[j].first) ++i;
-            else ++j;
+            if( vertices[v].portals[i].first == vertices[w].portals[j].first ) {
+                result=min(result, vertices[v].portals[i].second+vertices[w].portals[j].second);
+                ++i; ++j;
+            }
+            else {
+                if(vertices[v].portals[i].first < vertices[w].portals[j].first) ++i;
+                else ++j;
+            }
         }
-        if( i < vertices[v].portals.size() && j < vertices[w].portals.size() )
-            return vertices[v].portals[i].second+vertices[w].portals[j].second;
-        return infinity;
+
+        return result;
     }
 
     virtual
@@ -482,6 +487,7 @@ public:
         applyLabel(v, l);
     }
 
+
     virtual
     pair<W, int> labelToLabel(int v, int l) {
         pair<W, int> result(infinity, -1);
@@ -622,15 +628,19 @@ class StaticLLPlanarOracle : public PlanarOracle {
                 if(labels[l].S_v.find(u)==labels[l].S_v.end())
                     labels[l].S_v[u]=make_pair(du,v);
                 if(labels[l].S_v[u].first > du) labels[l].S_v[u]=make_pair(du,v);
-                if(labels[l].P_l.find(ll)==labels[l].P_l.end())
-                    labels[l].P_l[ll]=make_pair(du, make_pair(v, u));
-                if(labels[l].P_l[ll].first > du) labels[l].P_l[ll]=make_pair(du, make_pair(v, u));
-                if (v != u) {
-                    if(labels[ll].P_l.find(l)==labels[ll].P_l.end())
-                        labels[ll].P_l[l]=make_pair(du, make_pair(v, u));
-                    if(labels[ll].P_l[l].first > du)
-                        labels[ll].P_l[l]=make_pair(du, make_pair(v, u));
+
+                if(l < ll) {
+                    if(labels[l].P_l.find(ll)==labels[l].P_l.end())
+                        labels[l].P_l[ll]=make_pair(du, make_pair(v, u));
+                    else
+                        if(labels[l].P_l[ll].first > du) labels[l].P_l[ll]=make_pair(du, make_pair(v, u));
                 }
+                //if (v != u) {
+                //    if(labels[ll].P_l.find(l)==labels[ll].P_l.end())
+                //        labels[ll].P_l[l]=make_pair(du, make_pair(v, u));
+                //    if(labels[ll].P_l[l].first > du)
+                //        labels[ll].P_l[l]=make_pair(du, make_pair(v, u));
+                //}
             }
         }
 
@@ -672,23 +682,34 @@ public:
         int i=0, j=0;
         W result=infinity;
         while( i < vertices[v].portals.size() && j < vertices[w].portals.size() ) {
-            if( vertices[v].portals[i].first == vertices[w].portals[j].first )
-                break;
-            if(vertices[v].portals[i].first < vertices[w].portals[j].first) ++i;
-            else ++j;
-        }
-        if( i < vertices[v].portals.size() && j < vertices[w].portals.size() )
-            result = vertices[v].portals[i].second+vertices[w].portals[j].second;
+            if( vertices[v].portals[i].first == vertices[w].portals[j].first ) {
+                result = min(result,vertices[v].portals[i].second+vertices[w].portals[j].second);
+                ++i; ++j;
+            }
+            else {
+                if(vertices[v].portals[i].first < vertices[w].portals[j].first) ++i;
+                else ++j;
+            }
+        }    
 
         // JEszcze szukanie w kawalku ....
         auto it=lower_bound(vertices[v].dist.begin(),vertices[v].dist.end(),make_pair(w,(W)-1));
-        if(it!=vertices[v].dist.end() && it->first == w) result = min(result,it->second);
-
+        if (it!=vertices[v].dist.end() && it->first==w) result=min(result, it->second);
+        //for(auto &curr : vertices[v].dist)
+        //    if(curr.first==w) {
+        //        result=min(result,curr.second);
+        //        break;
+        //    }
+        //for(auto &curr : vertices[w].dist)
+        //    if(curr.first==v) {
+        //        result=min(result,curr.second);
+        //        break;
+        //    }
         return result;
     }
 
     virtual
-    pair<W, int> labelToLabel(int v, int l) {
+    pair<W, int> distanceToLabel(int v, int l) {
         pair<W, int> result(infinity, -1);
         for (auto &p: vertices[v].portals) {
             if(portals[p.first].N_l.find(l)==portals[p.first].N_l.end()) continue;
@@ -708,7 +729,9 @@ public:
 
     virtual
     pair<W, pair<int, int> > distanceBetweenLabels(int l1, int l2) {
+        if(l1==l2) return make_pair(0, make_pair(-1, -1));
         pair<W, pair<int, int> > result(infinity, make_pair(-1, -1));
+
         for (auto &p: portals) {
             if (p.N_l.find(l1)==p.N_l.end()) continue;
             if (p.N_l.find(l2)==p.N_l.end()) continue;
@@ -717,6 +740,7 @@ public:
                              p.N_l[l1].first + p.N_l[l2].first,
                              make_pair(p.N_l[l1].second, p.N_l[l2].second)));
         }
+        if(l1 > l2) swap(l1,l2);
         if( labels[l1].P_l.find(l2)!=labels[l1].P_l.end() )
             result = min(result, labels[l1].P_l[l2]);
 
