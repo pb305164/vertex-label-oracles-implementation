@@ -55,8 +55,8 @@ void check_nodes(unordered_mapB<int, Node> &nodes) {
     std::set<int> labels;
     // check ids are continuous 0...size()-1
     for (int i=0; i<(int)nodes.size(); i++) {
-        labels.insert(nodes[i].label);
         assert(nodes.find(i) != nodes.end());
+        labels.insert(nodes[i].label);
     }
 
     // check lables are continuous
