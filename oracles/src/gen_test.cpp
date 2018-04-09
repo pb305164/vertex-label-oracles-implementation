@@ -94,7 +94,7 @@ void print_vertex_vertex_queries(int VER_LOOP=1000, int short_size = 50000, int 
         queue.push(make_pair(0, v));
         dijkstra(queue, dist);
 
-        for (int j=0; j<n; j++) if (dist[j] != 0) all_dist.push_back(make_pair(dist[j], make_pair(v, j)));
+        for (int j=0; j<n; j++) if (dist[j] != 0 && dist[j] != infinity) all_dist.push_back(make_pair(dist[j], make_pair(v, j)));
     }
 
     print_random(short_size, med_size, long_size, all_dist);
@@ -106,7 +106,7 @@ void print_vertex_label_queries(int short_size = 50000, int med_size = 10000, in
     vector<W> dist(n);
     vector<pair<W, pair<int, int> > > all_dist;
 
-    for (int i=0; i<max_label; i++) {
+    for (int i=1; i<max_label; i++) {
         PQ queue;
 
         for (int j=0; j<n; j++) {
@@ -118,7 +118,7 @@ void print_vertex_label_queries(int short_size = 50000, int med_size = 10000, in
         }
         dijkstra(queue, dist);
 
-        for (int j=0; j<n; j++) if (dist[j] != 0) all_dist.push_back(make_pair(dist[j], make_pair(i, j)));
+        for (int j=0; j<n; j++) if (dist[j] != 0 && dist[j] != infinity) all_dist.push_back(make_pair(dist[j], make_pair(i, j)));
     }
 
     print_random(short_size, med_size, long_size, all_dist);
@@ -131,7 +131,7 @@ void print_label_label_queries(int short_size = 50000, int med_size = 10000, int
     W lbl_dist[max_label];
     vector<pair<W, pair<int, int> > > all_dist;
 
-    for (int i=0; i<max_label; i++) {
+    for (int i=1; i<max_label; i++) {
         PQ queue;
 
         for (int j=0; j<n; j++) {
@@ -144,7 +144,7 @@ void print_label_label_queries(int short_size = 50000, int med_size = 10000, int
         dijkstra(queue, dist);
         for (int j=0; j<max_label; j++) lbl_dist[j] = infinity;
         for (int j=0; j<n; j++) if (dist[j] < lbl_dist[labels[j]]) lbl_dist[labels[j]] = dist[j];
-        for (int j=0; j<max_label; j++) if (lbl_dist[j] != 0) all_dist.push_back(make_pair(lbl_dist[j], make_pair(i, j)));
+        for (int j=0; j<max_label; j++) if (lbl_dist[j] != 0 && lbl_dist[j] != infinity) all_dist.push_back(make_pair(lbl_dist[j], make_pair(i, j)));
     }
 
     print_random(short_size, med_size, long_size, all_dist);

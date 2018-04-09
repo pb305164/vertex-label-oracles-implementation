@@ -1,6 +1,7 @@
 #include <vector>
 #include <set>
 #include <boost/graph/boyer_myrvold_planar_test.hpp>
+#include <cstdlib>
 
 #include "mpreal.h"
 #include "common.h"
@@ -122,24 +123,85 @@ void merge_nodes(unordered_mapB<int, Node> &nodes, unordered_mapB<int, set<Edge>
     }
 }
 
+bool merge_edges = false, add_labels = true, planarize = true;
+mpreal min_travel_time = 0;
+char *osm_path = nullptr;
+
+void print_help() {
+    fprintf(stderr,
+            "Usage: ./gen-graph [options] path_to_osm_file [min dist]\n\n"
+            "Options:\n"
+            "  -h             : Print this help message\n\n"
+            "  -me            : Merge edges by removing nodes with degree = 2\n"
+            "                   This method desn't remove nodes with assigned labels,\n"
+            "                   and doesn't create self loops. Be default edges are not merged.\n\n"
+            "  -mn min_dist   : Merge nodes that are closer to each other then distance. By default nodes are not merged.\n"
+            "                   To keep compatibility with previous verison min_dist can be also given as last argument"
+            "  -P             : DON'T planarazie graph. By default graph is planarized\n\n"
+            "  -L             : DON'T add labeled nodes to graph. By default labeled nodes are added to graph\n\n"
+    );
+
+}
+
+void parse_program_options(int argc, char* argv[]) {
+    for (int i=1; i<argc;) {
+        if (strcmp("-h", argv[i]) == 0) {
+            print_help();
+            exit(0);
+        } else if (strcmp("-me", argv[i]) == 0) {
+            merge_edges = true;
+        } else if (strcmp("-mn", argv[i]) == 0) {
+            i++;
+            float m=-1;
+            if (sscanf(argv[i], "%f", &m) && m >= 0) {
+                min_travel_time = m;
+            } else {
+                fprintf(stderr, "Error while parsing mn option, no distance specified or invalid value\n\n");
+                print_help();
+                exit(1);
+            }
+        } else if (strcmp("-P", argv[i]) == 0) {
+            planarize = false;
+        } else if (strcmp("-L", argv[i]) == 0) {
+            add_labels = false;
+        } else {
+            if (osm_path == nullptr) {
+                osm_path = argv[i];
+            } else {
+                if (min_travel_time == 0) {
+                    // Legacy mode
+                    float m=-1;
+                    if (sscanf(argv[i], "%f", &m) && m >= 0) {
+                        min_travel_time = m;
+                    } else {
+                        fprintf(stderr, "Error while parsing arguments %d\n\n", i);
+                        print_help();
+                        exit(1);
+                    }
+                } else {
+                    fprintf(stderr, "Error while parsing arguments %d\n", i);
+                    exit(1);
+                }
+            }
+        }
+        i++;
+    }
+    if (osm_path == nullptr) {
+        fprintf(stderr, "Error no path to osm file specified\n\n");
+        print_help();
+        exit(1);
+    }
+}
+
 
 int main(int argc, char* argv[]) {
-    if (argc != 2 && argc != 3) {
-        fprintf(stderr, "Usage ./gen-graph path_to_osm_file [min travel time between nodes in s]\n");
-        return 1;
-    }
 
-    // Set flags/values for desired effects (TODO add program options)
-    bool merge_edges = false, add_labels = true, planarize = true;
-    // Removes edges with travel time less then min_time (in seconds), 0 -> no edges are removed
-    mpreal min_travel_time = 0;
-    if (argc == 3) min_travel_time = atof(argv[2]);
+    parse_program_options(argc, argv);
 
     mpfr::mpreal::set_default_prec(512);
     mpfr::mpreal::set_default_rnd(MPFR_RNDN);
     mpreal max_max_speed = FOOT_SPEED;
 
-    char *osm_path = argv[1];
     unordered_mapB<int, Node> nodes;
     unordered_mapB<int, set<Edge> > edges;
     vector<pair<int, int> > kur;

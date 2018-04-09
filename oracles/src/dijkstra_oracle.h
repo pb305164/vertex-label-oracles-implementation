@@ -18,7 +18,7 @@ using std::priority_queue;
 
 typedef pair<W, int> QEl;
 
-class DijkstraOracle{
+class DijkstraOracle {
 private:
     int n;
     vector<vector<pair<int, W> > > edges;
@@ -26,15 +26,13 @@ private:
     vector<int> labels;
 
 public:
-    DijkstraOracle(int nn, int m, int max_label, vector<pair<int, int>>& eedges, vector<W>& weights, vector<int>& llabels):
-            n(nn), edges(nn), lbl_to_ver(max_label), labels(llabels)
-
-    {
-        for (int i=0; i < (int)labels.size(); i++) {
+    DijkstraOracle(int nn, int m, int max_label, vector<pair<int, int>> &eedges, vector<W> &weights, vector<int> &llabels):
+            n(nn), edges(nn), lbl_to_ver(max_label), labels(llabels) {
+        for (int i = 0; i < (int) labels.size(); i++) {
             lbl_to_ver[labels[i]].push_back(i);
         }
 
-        for(int i=0; i<m; i++) {
+        for (int i = 0; i < m; i++) {
             int s, t;
             tie(s, t) = eedges[i];
             edges[s].push_back(make_pair(t, weights[i]));
@@ -120,6 +118,10 @@ public:
             }
         }
         return make_pair(-1, make_pair(-1, -1));
+    }
+
+    void setLabel(int v, int l) {
+        labels[v] = l;
     }
 };
 

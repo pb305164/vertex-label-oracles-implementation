@@ -175,6 +175,10 @@ public:
         }
         return make_pair(-1, make_pair(-1, -1));
     };
+
+    void setLabel(int v, int l) {
+        labels[v] = l;
+    }
 };
 
 #endif //VERTEX_LABEL_ORACLES_IMPLEMENTATION_MASTER_ASTAR_ORACLE_H
