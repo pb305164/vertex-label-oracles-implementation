@@ -45,6 +45,8 @@ long get_mem_usage() {
 float EPS = 1.0, min_port_dist = -1.0;
 int RO = -1, oracle_type = -1;
 char *osrm_path = nullptr, *graph_path = nullptr, *test_path = nullptr;
+int n, m, max_label, sample_count, sample_size, test_type, allowed_queries, weights_as_distance;
+
 
 void print_help() {
     fprintf(stderr,
@@ -66,9 +68,9 @@ void print_help() {
                     "                      11: Dijkstra\n"
                     "                      12: Astar\n"
 
-                    "  -eps float   : Epsilon value for planar oracles (default = 1.0)\n\n"
-                    "  -mpd float   : Minimal distances between portals for hierarchal oracles (default 0 for light, 15 for full)\n\n"
-                    "  -ro  int     : Ro value for aprox oracles (default -1)\n\n"
+                    "  -EPS float   : Epsilon value for planar oracles (default = 1.0)\n\n"
+                    "  -MPD float   : Minimal distances between portals for hierarchal oracles (default 0 for light, 15 for full)\n\n"
+                    "  -RO  int     : Ro value for aprox oracles (default -1)\n\n"
     );
 
 }
@@ -94,10 +96,10 @@ void parse_program_options(int argc, char* argv[]) {
                 print_help();
                 exit(1);
             }
-        } else if (strcmp("-eps", argv[i]) == 0) {
+        } else if (strcmp("-EPS", argv[i]) == 0) {
             i++;
             if (i >= argc) {
-                fprintf(stderr, "Error while parsing -eps option, no value\n\n");
+                fprintf(stderr, "Error while parsing -EPS option, no value\n\n");
                 print_help();
                 exit(1);
             }
@@ -105,37 +107,37 @@ void parse_program_options(int argc, char* argv[]) {
             if (sscanf(argv[i], "%f", &v) && v >= 0) {
                 EPS = v;
             } else {
-                fprintf(stderr, "Error while parsing -eps option, invalid value\n\n");
+                fprintf(stderr, "Error while parsing -EPS option, invalid value\n\n");
                 print_help();
                 exit(1);
             }
-        } else if (strcmp("-mpd", argv[i]) == 0) {
+        } else if (strcmp("-MPD", argv[i]) == 0) {
             i++;
             float v=-1;
             if (i >= argc) {
-                fprintf(stderr, "Error while parsing -mpd option, no value\n\n");
+                fprintf(stderr, "Error while parsing -MPD option, no value\n\n");
                 print_help();
                 exit(1);
             }
             if (sscanf(argv[i], "%f", &v) && v >= 0) {
                 min_port_dist = v;
             } else {
-                fprintf(stderr, "Error while parsing -mpd option, invalid value\n\n");
+                fprintf(stderr, "Error while parsing -MPD option, invalid value\n\n");
                 print_help();
                 exit(1);
             }
-        } else if (strcmp("-ro", argv[i]) == 0) {
+        } else if (strcmp("-RO", argv[i]) == 0) {
             i++;
             int v=-1;
             if (i >= argc) {
-                fprintf(stderr, "Error while parsing -ro option, no value\n\n");
+                fprintf(stderr, "Error while parsing -RO option, no value\n\n");
                 print_help();
                 exit(1);
             }
             if (sscanf(argv[i], "%d", &v) && v >= 0) {
                 RO = v;
             } else {
-                fprintf(stderr, "Error while parsing -ro option, invalid value\n\n");
+                fprintf(stderr, "Error while parsing -RO option, invalid value\n\n");
                 print_help();
                 exit(1);
             }
@@ -172,7 +174,7 @@ void run_query0(T &oracle, tuple<int, int, int, float> &q) {
     float d = oracle.distanceToVertex(get<1>(q), get<2>(q));
     auto t2 = std::chrono::steady_clock::now();
     std::chrono::duration<double, std::milli> t = t2 -t1;
-    printf("%d %f %f %lf %ld\n", 0, d, get<3>(q), t.count(), get_mem_usage());
+    printf("%d %f %f %lf\n", 0, d, get<3>(q), t.count());
 }
 
 template <class T>
@@ -181,7 +183,7 @@ void run_query1(T &oracle, tuple<int, int, int, float> &q) {
     pair<W, int> d = oracle.distanceToLabel(get<1>(q), get<2>(q));
     auto t2 = std::chrono::steady_clock::now();
     std::chrono::duration<double, std::milli> t = t2 -t1;
-    printf("%d %f %f %lf %ld\n", 1, d.first, get<3>(q), t.count(), get_mem_usage());
+    printf("%d %f %f %lf\n", 1, d.first, get<3>(q), t.count());
 }
 
 template <class T>
@@ -190,7 +192,7 @@ void run_query2(T &oracle, tuple<int, int, int, float> &q) {
     pair<W, pair<int, int>> d = oracle.distanceBetweenLabels(get<1>(q), get<2>(q));
     auto t2 = std::chrono::steady_clock::now();
     std::chrono::duration<double, std::milli> t = t2 -t1;
-    printf("%d %f %f %lf %ld\n", 2, d.first, get<3>(q), t.count(), get_mem_usage());
+    printf("%d %f %f %lf\n", 2, d.first, get<3>(q), t.count());
 }
 
 template <class T>
@@ -199,12 +201,13 @@ void run_query3(T &oracle, tuple<int, int, int, float> &q) {
     oracle.setLabel(get<1>(q), get<2>(q));
     auto t2 = std::chrono::steady_clock::now();
     std::chrono::duration<double, std::milli> t = t2 -t1;
-    printf("%d %f %f %lf %ld\n", 3, .0, .0, t.count(), get_mem_usage());
+    printf("%d %f %f %lf\n", 3, .0, .0, t.count());
 }
 
 template <class T>
 void run_all_queries(T &oracle, vector<tuple<int, int, int, float>> &queries)
 {
+    size_t count=0;
     for (auto &q: queries) {
         // For each query there are 5 numbers printed out: type of query, oracle answer, solution, time in miliseconds, estimated memory usage
         if (get<0>(q) == 0) {
@@ -219,6 +222,8 @@ void run_all_queries(T &oracle, vector<tuple<int, int, int, float>> &queries)
             fprintf(stderr, "Error, bad query type ?\n");
             exit(1);
         }
+        count++;
+        if (count%sample_size==0) printf("%ld", get_mem_usage());
     }
 }
 
@@ -232,6 +237,7 @@ void run_VL_SL_queries(T &oracle, vector<tuple<int, int, int, float>> &queries)
             exit(1);
         }
     }
+    size_t count=0;
     for (auto &q: queries) {
         // For each query there are 5 numbers printed out: type of query, oracle answer, solution, time in miliseconds, estimated memory usage
         if (get<0>(q) == 1) {
@@ -242,6 +248,8 @@ void run_VL_SL_queries(T &oracle, vector<tuple<int, int, int, float>> &queries)
             fprintf(stderr, "Error, bad query type ?\n");
             exit(1);
         }
+        count++;
+        if (count%sample_size==0) printf("%ld", get_mem_usage());
     }
 }
 
@@ -255,6 +263,7 @@ void run_VV_VL_queries(T &oracle, vector<tuple<int, int, int, float>> &queries)
             exit(1);
         }
     }
+    size_t count=0;
     for (auto &q: queries) {
         // For each query there are 5 numbers printed out: type of query, oracle answer, solution, time in miliseconds, estimated memory usage
         if (get<0>(q) == 0) {
@@ -265,6 +274,8 @@ void run_VV_VL_queries(T &oracle, vector<tuple<int, int, int, float>> &queries)
             fprintf(stderr, "Error, bad query type ?\n");
             exit(1);
         }
+        count++;
+        if (count%sample_size==0) printf("%ld", get_mem_usage());
     }
 }
 
@@ -278,6 +289,7 @@ void run_LL_SL_queries(T &oracle, vector<tuple<int, int, int, float>> &queries)
             exit(1);
         }
     }
+    size_t count=0;
     for (auto &q: queries) {
         // For each query there are 5 numbers printed out: type of query, oracle answer, solution, time in miliseconds, estimated memory usage
         if (get<0>(q) == 2) {
@@ -288,6 +300,8 @@ void run_LL_SL_queries(T &oracle, vector<tuple<int, int, int, float>> &queries)
             fprintf(stderr, "Error, bad query type ?\n");
             exit(1);
         }
+        count++;
+        if (count%sample_size==0) printf("%ld", get_mem_usage());
     }
 }
 
@@ -301,6 +315,7 @@ void run_VV_VL_SL_queries(T &oracle, vector<tuple<int, int, int, float>> &querie
             exit(1);
         }
     }
+    size_t count=0;
     for (auto &q: queries) {
         // For each query there are 5 numbers printed out: type of query, oracle answer, solution, time in miliseconds, estimated memory usage
         if (get<0>(q) == 0) {
@@ -313,6 +328,8 @@ void run_VV_VL_SL_queries(T &oracle, vector<tuple<int, int, int, float>> &querie
             fprintf(stderr, "Error, bad query type ?\n");
             exit(1);
         }
+        count++;
+        if (count%sample_size==0) printf("%ld", get_mem_usage());
     }
 }
 
@@ -326,6 +343,7 @@ void run_VL_LL_SL_queries(T &oracle, vector<tuple<int, int, int, float>> &querie
             exit(1);
         }
     }
+    size_t count=0;
     for (auto &q: queries) {
         // For each query there are 5 numbers printed out: type of query, oracle answer, solution, time in miliseconds, estimated memory usage
         if (get<0>(q) == 1) {
@@ -338,6 +356,8 @@ void run_VL_LL_SL_queries(T &oracle, vector<tuple<int, int, int, float>> &querie
             fprintf(stderr, "Error, bad query type ?\n");
             exit(1);
         }
+        count++;
+        if (count%sample_size==0) printf("%ld", get_mem_usage());
     }
 }
 
@@ -351,6 +371,7 @@ void run_VV_VL_LL_queries(T &oracle, vector<tuple<int, int, int, float>> &querie
             exit(1);
         }
     }
+    size_t count=0;
     for (auto &q: queries) {
         // For each query there are 5 numbers printed out: type of query, oracle answer, solution, time in miliseconds, estimated memory usage
         if (get<0>(q) == 0) {
@@ -363,6 +384,8 @@ void run_VV_VL_LL_queries(T &oracle, vector<tuple<int, int, int, float>> &querie
             fprintf(stderr, "Error, bad query type ?\n");
             exit(1);
         }
+        count++;
+        if (count%sample_size==0) printf("%ld", get_mem_usage());
     }
 }
 
@@ -377,15 +400,14 @@ int main(int argc, char* argv[]) {
     W max_speed;
     vector<pair<W, W>> coords;
     vector<tuple<int, int, int, float>> queries;
-    int n, m, max_label, sample_count, sample_size, test_type, allowed_queries, weights_as_distance;
-
 
     parse_program_options(argc, argv);
-//    printf("%d");
+//    printf("oracle_type: %d   EPS: %f   MPD: %f   RO: %d  osm_path: %s   graph_path: %s  test_path: %s\n",
+//           oracle_type, EPS, min_port_dist, RO, osrm_path, graph_path, test_path);
 //    return 0;
 
     // Read graph
-    FILE *pfile = fopen(argv[2], "r");
+    FILE *pfile = fopen(graph_path, "r");
     if (pfile == nullptr) {
         fprintf(stderr, "ERROR while opening graph file\n");
         return 1;
@@ -394,7 +416,7 @@ int main(int argc, char* argv[]) {
     fclose(pfile);
 
     // Read tests
-    pfile = fopen(argv[3], "r");
+    pfile = fopen(test_path, "r");
     if (pfile == nullptr) {
         fprintf(stderr, "ERROR while opening test file\n");
         fclose(pfile);
@@ -425,13 +447,12 @@ int main(int argc, char* argv[]) {
 
     std::chrono::duration<double, std::milli> build_time;
     switch (oracle_type) {
-        // TODO add static cases
         case 0: {
             auto t1 = std::chrono::steady_clock::now();
             FullPlanarOracle oracle(n, edges, distances, labels, EPS);
             auto t2 = std::chrono::steady_clock::now();
             build_time = t2 - t1;
-            printf("%lf\n", build_time.count());
+            printf("%d %d %lf %ld\n", sample_count, sample_size, build_time.count(), get_mem_usage());
             run_VL_SL_queries(oracle, queries);
             break;
         }
@@ -441,7 +462,7 @@ int main(int argc, char* argv[]) {
             FullFullPlanarOracle oracle(n, edges, distances, labels, EPS);
             auto t2 = std::chrono::steady_clock::now();
             build_time = t2 - t1;
-            printf("%lf\n", build_time.count());
+            printf("%d %d %lf %ld\n", sample_count, sample_size, build_time.count(), get_mem_usage());
             run_LL_SL_queries(oracle, queries);
             break;
         }
@@ -452,7 +473,7 @@ int main(int argc, char* argv[]) {
 //            StaticPlanarOracle oracle(n, edges, distances, labels, EPS);
 //            auto t2 = std::chrono::steady_clock::now();
 //            build_time = t2 - t1;
-//            printf("%lf\n", build_time.count());
+//            printf("%d %d %lf %ld\n", sample_count, sample_size, build_time.count(), get_mem_usage());
 //            run_VV_VL_queries(oracle, queries);
             break;
         }
@@ -463,7 +484,7 @@ int main(int argc, char* argv[]) {
 //            StaticLLPlanarOracle oracle(n, edges, distances, labels, EPS);
 //            auto t2 = std::chrono::steady_clock::now();
 //            build_time = t2 - t1;
-//            printf("%lf\n", build_time.count());
+//            printf("%d %d %lf %ld\n", sample_count, sample_size, build_time.count(), get_mem_usage());
 //            run_VV_VL_LL_queries(oracle, queries);
             break;
         }
@@ -473,7 +494,7 @@ int main(int argc, char* argv[]) {
             OracleGeneral5ApproxQuery oracle(n, edges, distances, labels, RO);
             auto t2 = std::chrono::steady_clock::now();
             build_time = t2 - t1;
-            printf("%lf\n", build_time.count());
+            printf("%d %d %lf %ld\n", sample_count, sample_size, build_time.count(), get_mem_usage());
             run_VL_SL_queries(oracle, queries);
             break;
         }
@@ -483,7 +504,7 @@ int main(int argc, char* argv[]) {
             OracleGeneral5ApproxUpdate oracle(n, edges, distances, labels, RO);
             auto t2 = std::chrono::steady_clock::now();
             build_time = t2 - t1;
-            printf("%lf\n", build_time.count());
+            printf("%d %d %lf %ld\n", sample_count, sample_size, build_time.count(), get_mem_usage());
             run_VL_SL_queries(oracle, queries);
             break;
         }
@@ -493,7 +514,7 @@ int main(int argc, char* argv[]) {
             OracleGeneral3ApproxLight oracle(n, edges, distances, labels, RO);
             auto t2 = std::chrono::steady_clock::now();
             build_time = t2 - t1;
-            printf("%lf\n", build_time.count());
+            printf("%d %d %lf %ld\n", sample_count, sample_size, build_time.count(), get_mem_usage());
             run_VL_LL_SL_queries(oracle, queries);
             break;
         }
@@ -503,7 +524,7 @@ int main(int argc, char* argv[]) {
             OracleGeneral3Approx oracle(n, edges, distances, labels, RO);
             auto t2 = std::chrono::steady_clock::now();
             build_time = t2 - t1;
-            printf("%lf\n", build_time.count());
+            printf("%d %d %lf %ld\n", sample_count, sample_size, build_time.count(), get_mem_usage());
             run_VL_LL_SL_queries(oracle, queries);
             break;
         }
@@ -513,7 +534,7 @@ int main(int argc, char* argv[]) {
             HierarchyOracle oracle(edges, distances, labels, types, 0, min_port_dist);
             auto t2 = std::chrono::steady_clock::now();
             build_time = t2 - t1;
-            printf("%lf\n", build_time.count());
+            printf("%d %d %lf %ld\n", sample_count, sample_size, build_time.count(), get_mem_usage());
             run_all_queries(oracle, queries);
             break;
         }
@@ -523,7 +544,7 @@ int main(int argc, char* argv[]) {
             HierarchyOracleLight oracle(edges, distances, labels, types, 0, min_port_dist);
             auto t2 = std::chrono::steady_clock::now();
             build_time = t2 - t1;
-            printf("%lf\n", build_time.count());
+            printf("%d %d %lf %ld\n", sample_count, sample_size, build_time.count(), get_mem_usage());
             run_VV_VL_SL_queries(oracle, queries);
             break;
         }
@@ -533,7 +554,7 @@ int main(int argc, char* argv[]) {
             OsrmOracle oracle(osrm_path, max_label, coords, labels);
             auto t2 = std::chrono::steady_clock::now();
             build_time = t2 - t1;
-            printf("%lf\n", build_time.count());
+            printf("%d %d %lf %ld\n", sample_count, sample_size, build_time.count(), get_mem_usage());
             run_VV_VL_LL_queries(oracle, queries);
             break;
         }
@@ -543,7 +564,7 @@ int main(int argc, char* argv[]) {
             DijkstraOracle oracle(n, m, max_label, edges, distances, labels);
             auto t2 = std::chrono::steady_clock::now();
             build_time = t2 - t1;
-            printf("%lf\n", build_time.count());
+            printf("%d %d %lf %ld\n", sample_count, sample_size, build_time.count(), get_mem_usage());
             run_all_queries(oracle, queries);
             break;
         }
@@ -553,7 +574,7 @@ int main(int argc, char* argv[]) {
             AstarOracle oracle(n, m, max_label, max_speed, edges, distances, labels, coords);
             auto t2 = std::chrono::steady_clock::now();
             build_time = t2 - t1;
-            printf("%lf\n", build_time.count());
+            printf("%d %d %lf %ld\n", sample_count, sample_size, build_time.count(), get_mem_usage());
             run_all_queries(oracle, queries);
             break;
         }

@@ -136,8 +136,8 @@ void print_help() {
                     "                      1: distance queries vs setting labels\n"
                     "                      2: Add new labels close to each other, then remove them\n"
                     "                      3: Start with graph without labels, add them gradually\n\n"
-                    "  -CS float    : Start value of constraints on test (default 0)\n\n"
-                    "  -CE float    : End value of constraints on test (default 0)\n\n"
+                    "  -CS float    : Start value of constraints on test\n\n"
+                    "  -CE float    : End value of constraints on test\n\n"
 
     );
 

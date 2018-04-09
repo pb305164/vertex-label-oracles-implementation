@@ -19,7 +19,7 @@
             do { if (DEBUG>0) fprintf(stderr, ##__VA_ARGS__); } while (0)
 #define printfdd(...) \
             do { if (DEBUG>1) fprintf(stderr, ##__VA_ARGS__); } while (0)
-#define DEBUG 1
+#define DEBUG 0
 
 
 using namespace std;
