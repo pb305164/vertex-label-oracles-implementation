@@ -37,7 +37,6 @@ private:
         }
     }
 
-    // TODO add tests to check if works
     void purgeLabel(int v) {
         if (label[v] != 0) {
             int v_lbl = label[v];
@@ -79,8 +78,6 @@ private:
         label[v] = 0;
     }
 
-    // TODO add tests to check if works
-    // Set vertex label to l
     void applyLabel(int v, int l) {
         assert(label[v] == 0);
         if (l != 0) {
@@ -122,14 +119,7 @@ public:
         if (_min_portal_dist > 0) merge_close_portals(is_portal, _min_portal_dist);
 
         // Process Portals (Calculate distances, populate S, N, P heaps)
-        float prog=0;
         for (size_t i=0; i<nodes_count; i++) {
-
-            if (floor(((float)(i)/(float)(nodes_count) * 20.0) ) > prog) {
-                prog++;
-                printfd("PROGRES: %f %%\n", prog*5.0);
-            }
-
             if (is_portal[i]) {
 
                 vector<W> distances(nodes_count, infinity);

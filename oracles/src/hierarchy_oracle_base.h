@@ -15,11 +15,6 @@
 #include "find_union.h"
 #include "heap.h"
 
-#define printfd(...) \
-            do { if (DEBUG>0) fprintf(stderr, ##__VA_ARGS__); } while (0)
-#define printfdd(...) \
-            do { if (DEBUG>1) fprintf(stderr, ##__VA_ARGS__); } while (0)
-#define DEBUG 0
 
 
 using namespace std;
@@ -388,8 +383,6 @@ protected:
             } else side2_size++;
         }
 
-        printfdd("div on side1: %lu    side2: %lu   size: %lu\n", side1_size, side2_size, comp.size());
-
         assert(sep_size > 0);
 
         // Try to optimize separator size
@@ -414,9 +407,6 @@ protected:
             }
 
             assert(new_sep[id_map[start]] == true && new_sep[id_map[end]] == true);
-
-            printfdd("path size %lu\n", new_sep_size);
-
             size_t max_part_limit = comp.size() - (size_t) (min(side1_size, side2_size) * 0.7);
 
             // If it is proper separator try remove unnecessary nodes
@@ -435,8 +425,6 @@ protected:
             }
 
             assert(new_sep_size > 0);
-
-            printfdd("sep diff old: %lu   new: %lu\n", sep_size, new_sep_size);
             if (new_sep_size < sep_size) {
                 for (size_t i = 0; i < separator.size(); i++) {
                     separator[i] = new_sep[i];
@@ -557,17 +545,8 @@ protected:
             }
         }
         it++; // it now points into first empty cell
-        size_t size=0;
 
-        // Check
-        for (vector<vector<int>>::iterator ittt = components.begin(); ittt != it; ittt++) {
-            assert(!ittt->empty());
-            size++;
-        }
-        for (vector<vector<int>>::iterator ittt = it; ittt != components.end(); ittt++) {
-            assert(ittt->empty());
-        }
-        components.resize(size); // Remove all empty cells
+        components.resize(it-components.begin()); // Remove all empty cells
         components.shrink_to_fit();
 
         // Remap neighborhood
@@ -597,7 +576,6 @@ protected:
             if (max_size < v.size()) max_size = v.size();
             if (!v.empty() && min_size > v.size()) min_size = v.size();
         }
-        printfd("neigh size  max: %lu  min: %lu\nportals:  %d\n", max_size, min_size, portal_count);
 //        check_neigh();
     }
 
@@ -714,17 +692,11 @@ protected:
                 }
             }
         }
-
-        int ile = 0;
-        for (size_t i = 0; i < nodes_count; i++) if (is_portal[i]) ile++;
-        printfd("portals after merge: %d\n", ile);
     }
 
     void basic_construct(vector <pair<int, int>> &_edges, vector <W> &_weights,
                          vector<char> &_types,vector<bool> &is_portal, size_t _max_neigh_size) {
         if (_max_neigh_size == 0) _max_neigh_size = 2 * (size_t) ceil(sqrt(nodes_count));
-
-        printfd("nodes: %lu  edges: %lu\n", nodes_count, _edges.size());
         for (size_t i = 0; i < _edges.size(); i++) {
             edges[_edges[i].first].emplace_back(Edge(_types[i], _edges[i].second, _weights[i]));
             edges[_edges[i].second].emplace_back(Edge(_types[i], _edges[i].first, _weights[i]));
@@ -741,10 +713,6 @@ protected:
                     neigh_to_portals[neighborhood[e.destination]].insert(i);
                 }
             }
-        }
-
-        for (size_t i = 0; i < components.size(); i++) {
-            assert(neigh_to_portals.count(i));
         }
     }
 

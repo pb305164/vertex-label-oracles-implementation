@@ -12,18 +12,9 @@ private:
     unordered_map<int, Portal> portals; // Used for vertex-label queries
 
     // Calculate portal distances to incident neighborhoods and portals incident to those neighborhoods
-    void calc_portal_distances(unordered_map<int, W> &distances, int p, vector<bool> &is_portal, map<int, set<int>> &portal_to_neigh) {
+    void calc_portal_distances(unordered_map<int, W> &distances, int p, vector<bool> &is_portal, set<int> need_visit, map<int, set<int>> &portal_to_neigh) {
         typedef pair<W, int> QEl;
         priority_queue<QEl, vector<QEl>, greater<> > queue;
-        set<int> need_visit;
-
-        // Select portals that p need to have distances to
-        for (int neigh: portal_to_neigh[p]) {
-            for (int portal: neigh_to_portals[neigh]) {
-                need_visit.insert(portal);
-            }
-        }
-        set<int> hmm = need_visit;
 
         distances[p] = 0;
         queue.push(make_pair(0, p));
@@ -41,15 +32,6 @@ private:
                     distances[u] = d + e.weight;
                     queue.push(make_pair(distances[u], u));
                 }
-            }
-        }
-
-        // Remove not needed distances
-        for (unordered_map<int, W>::iterator it=distances.begin(); it != distances.end();) {
-            if (hmm.count(it->first) == 0 && neigh_to_portals[neighborhood[it->first]].count(p) == 0) {
-                it = distances.erase(it);
-            } else {
-                it++;
             }
         }
     }
@@ -177,23 +159,30 @@ public:
         }
 
         // Process Portals (Calculate distances, populate N heaps)
-        float prog = 0;
         for (size_t i = 0; i < nodes_count; i++) {
-            if (floor(((float) (i) / (float) (nodes_count) * 20.0)) > prog) {
-                prog++;
-                printfd("PROGRES: %f %%\n", prog * 5.0);
-            }
 
             if (is_portal[i]) {
-                calc_portal_distances(portal_distances[i], i, is_portal, portal_to_neigh);
+                unordered_map<int, W> distances;
+                set<int> need_visit;
+                // Select portals that p need to have distances to
+                for (int neigh: portal_to_neigh[i]) {
+                    for (int portal: neigh_to_portals[neigh]) {
+                        need_visit.insert(portal);
+                    }
+                }
+
+                calc_portal_distances(distances, i, is_portal, need_visit, portal_to_neigh);
 
                 // Group distances in portals by label (construct N-stacks)
-                for (auto &p: portal_distances[i]) {
-                    if (label[p.first] != 0) {
-                        portals[i].N[label[p.first]].insert(portals[i].ver_pos, p.first, p.second);
-                    }
-                    if (is_portal[p.first]) {
-                        portal_portal_distances[i][p.first] = p.second;
+                for (auto &p: distances) {
+                    if (need_visit.count(p.first) > 0 || neigh_to_portals[neighborhood[p.first]].count(i) > 0) {
+                        portal_distances[i].insert(p);
+                        if (label[p.first] != 0) {
+                            portals[i].N[label[p.first]].insert(portals[i].ver_pos, p.first, p.second);
+                        }
+                        if (is_portal[p.first]) {
+                            portal_portal_distances[i][p.first] = p.second;
+                        }
                     }
                 }
                 assert(portal_portal_distances[i].size() > 1);

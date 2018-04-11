@@ -47,7 +47,7 @@ class AstarOracle{
 private:
     int n;
     vector<vector<pair<int, W> > > edges;
-    vector<vector<int> > lbl_to_ver;
+    unordered_map<int, set<int>> lbl_to_ver;
     vector<pair<W, W> > coordinates;
     vector<int> labels;
     W max_speed;
@@ -65,8 +65,10 @@ public:
             n(nn), edges(nn), lbl_to_ver(max_label), coordinates(cords), labels(llabels), max_speed(mmax_speed) //, geodesic(EARTH_RADIUS, 1/INVERSE_FLATTENING)
 
     {
-        for (int i=0; i < (int)labels.size(); i++) {
-            lbl_to_ver[labels[i]].push_back(i);
+        for (int i = 0; i < (int) labels.size(); i++) {
+            if (labels[i] != 0) {
+                lbl_to_ver[labels[i]].insert(i);
+            }
         }
 
         for(int i=0; i<m; i++) {
@@ -177,7 +179,17 @@ public:
     };
 
     void setLabel(int v, int l) {
+        if (labels[v] != 0) {
+            lbl_to_ver[labels[v]].erase(v);
+        }
         labels[v] = l;
+        if (l != 0) {
+            lbl_to_ver[l].insert(v);
+        }
+    }
+
+    int labelOf(int v) {
+        return labels[v];
     }
 };
 

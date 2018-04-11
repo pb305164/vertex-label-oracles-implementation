@@ -10,6 +10,7 @@
 #include "osrm_oracle.h"
 #include "hierarchy_oracle.h"
 #include "hierarchy_oracle_light.h"
+#include "hierarchy_oracle_light_path.h"
 
 #include <chrono>
 
@@ -257,6 +258,8 @@ int main(int argc, char* argv[]) {
     printf("pamięć przed: %ldK\n", get_mem_size());
 
     std::chrono::duration<double, std::milli> build_time;
+
+
     printf("HIERARCHY\n");
     {
         auto t1 = std::chrono::steady_clock::now();
@@ -275,6 +278,21 @@ int main(int argc, char* argv[]) {
     {
         auto t1 = std::chrono::steady_clock::now();
         HierarchyOracleLight oracle(edges, distances, labels, types);
+        auto t2 = std::chrono::steady_clock::now();
+        build_time = t2 - t1;
+        printf("Czas budowy: %lfs   pamięć: %ldK\n", build_time.count() / 1000, get_mem_size() - mem_begin);
+        run_all_vv_tests(oracle, tests);
+        run_all_vl_tests(oracle, tests);
+        printf("pamięć po testach: %ldK\n", get_mem_size() - mem_begin);
+        printf("\n\n");
+    }
+
+   printf("pamięć pomiędzy: %ldK\n", get_mem_size());
+
+    printf("HIERARCHY LIGHT Path\n");
+    {
+        auto t1 = std::chrono::steady_clock::now();
+        HierarchyOracleLightPath oracle(edges, distances, labels, types);
         auto t2 = std::chrono::steady_clock::now();
         build_time = t2 - t1;
         printf("Czas budowy: %lfs   pamięć: %ldK\n", build_time.count() / 1000, get_mem_size() - mem_begin);

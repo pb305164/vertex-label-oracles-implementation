@@ -5,12 +5,14 @@
 #include <queue>
 #include <tuple>
 #include <map>
+#include <unordered_map>
 #include <random>
 #include <functional>
 
 #include "read_graph.h"
 #include <set>
 #include <cstring>
+
 
 using namespace std;
 
@@ -20,7 +22,7 @@ typedef priority_queue<QEl, vector<QEl>, greater<QEl>> PQ;
 vector<char> types;
 vector<W> max_speeds;
 vector<W> distances;
-vector<pair<W, W> > cords;
+vector<pair<W, W> > coords;
 vector<int> labels;
 vector<vector<pair<W, int>>> edges;
 int n, m, max_label;
@@ -32,6 +34,19 @@ char *graph_path = nullptr;
 bool weights_as_distance = false;
 int sample_count=100, sample_size=10000, allowed_queries=111, test_type=0;
 float option_start=-1, option_end=-1;
+
+
+bool allowed_vv() {
+    return allowed_queries/100 > 0;
+}
+
+bool allowed_vl() {
+    return (allowed_queries/10)%10 > 0;
+}
+
+bool allowed_ll() {
+    return allowed_queries%10 > 0;
+}
 
 
 void dijkstra(PQ &queue, vector<W> &dist)
@@ -52,9 +67,39 @@ void dijkstra(PQ &queue, vector<W> &dist)
     }
 }
 
+vector<pair<W, pair<int, int>>> get_queries_to_vertices(int v) {
+    vector<W> dist(n, infinity);
+    for (int j=0; j<n; j++) dist[j] = infinity;
+    dist[v] = 0;
+    PQ queue;
+    queue.push(make_pair(0, v));
+    dijkstra(queue, dist);
+
+    vector<pair<W, pair<int, int>>> queries;
+    for (int i=0; i<n; i++) {
+        queries.push_back(make_pair(dist[i], make_pair(v, i)));
+    }
+    return queries;
+}
+
+vector<pair<W, pair<int, int>>> get_queries_to_labels(int v, unordered_map<int, set<int>> lbl_to_ver) {
+    vector<W> dist(n, infinity), lbl_dist(max_label, infinity);
+    PQ queue;
+    dist[v] = 0;
+    queue.push(make_pair(0, v));
+    dijkstra(queue, dist);
+    for(int i=0; i<n; i++) {
+        if (dist[i] < lbl_dist[labels[i]]) lbl_dist[labels[i]] = dist[i];
+    }
+
+    vector<pair<W, pair<int, int>>> queries;
+    for (int i=0; i<max_label; i++) {
+        queries.push_back(make_pair(lbl_dist[i], make_pair(v, i)));
+    }
+    return queries;
+}
 
 void calc_some_vertex_vertex_queries(vector<pair<W, pair<int, int>>> &some_vv_dist) {
-    vector<W> dist(n);
     set<int> used;
     int VER_LOOP = max_label*10; // TODO check if not to much
 
@@ -63,19 +108,22 @@ void calc_some_vertex_vertex_queries(vector<pair<W, pair<int, int>>> &some_vv_di
     auto ver_rng = bind(uniform_int_distribution<int>(0, n-1), default_random_engine());
     auto add_rng = bind(uniform_int_distribution<int>(0, 9), default_random_engine());
     for (int i=0; i<VER_LOOP; i++) {
-        PQ queue;
-        for (int j=0; j<n; j++) dist[j] = infinity;
         int v = ver_rng();
         while (used.find(v) != used.end()) v = ver_rng();
         used.insert(v);
+        vector<W> dist(n, infinity);
+        PQ queue;
         dist[v] = 0;
         queue.push(make_pair(0, v));
         dijkstra(queue, dist);
 
         for (int j=0; j<n; j++) if (dist[j] != 0 && add_rng() == 0) some_vv_dist.push_back(make_pair(dist[j], make_pair(v, j)));
     }
-}
 
+    // Sort by distance
+    auto cmp = [](pair<W, pair<int, int> > &a, pair<W, pair<int, int> > &b) { return a.first < b.first; };
+    sort(some_vv_dist.begin(), some_vv_dist.end(), cmp);
+}
 
 void calc_all_vertex_label(vector<pair<W, pair<int, int>>> &all_dist) {
     vector<W> dist(n);
@@ -94,6 +142,10 @@ void calc_all_vertex_label(vector<pair<W, pair<int, int>>> &all_dist) {
 
         for (int j=0; j<n; j++) if (dist[j] != 0) all_dist.push_back(make_pair(dist[j], make_pair(i, j)));
     }
+
+    // Sort by distance
+    auto cmp = [](pair<W, pair<int, int> > &a, pair<W, pair<int, int> > &b) { return a.first < b.first; };
+    sort(all_dist.begin(), all_dist.end(), cmp);
 }
 
 
@@ -115,6 +167,113 @@ void calc_all_label_label_dist(vector<pair<W, pair<int, int>>> &all_dist) {
         for (int j=0; j<max_label; j++) lbl_dist[j] = infinity;
         for (int j=0; j<n; j++) if (dist[j] < lbl_dist[labels[j]]) lbl_dist[labels[j]] = dist[j];
         for (int j=0; j<max_label; j++) if (lbl_dist[j] != 0) all_dist.push_back(make_pair(lbl_dist[j], make_pair(i, j)));
+    }
+
+    // Sort by distance
+    auto cmp = [](pair<W, pair<int, int> > &a, pair<W, pair<int, int> > &b) { return a.first < b.first; };
+    sort(all_dist.begin(), all_dist.end(), cmp);
+}
+
+
+// Split queries in dist, into bucket_count buckets based on distance
+void split_by_distance(vector<pair<W, pair<int, int>>> queries, vector<vector<pair<W, pair<int, int>>>> &buckets, float start_percentile = 0, float end_percentile = 1) {
+    W min_dist = (queries.back().first-queries.front().first)*start_percentile + queries.front().first;
+    W max_dist = queries.back().first*end_percentile + (W)0.1;
+    for (auto &q: queries) {
+        if (q.first > min_dist && q.first < max_dist) {
+            buckets[floor(((q.first - min_dist) * buckets.size()) / (max_dist-min_dist))].push_back(q);
+        }
+    }
+}
+
+
+float get_distance_to_label(int start, int l) {
+    vector<W> dist(n, infinity);
+    PQ queue;
+
+    dist[start] = 0;
+    queue.push(make_pair(0, start));
+    while (!queue.empty()) {
+        pair<W, int> curr = queue.top();
+        queue.pop();
+        int v = curr.second;
+        W d = curr.first;
+        if (labels[v] == l) return d;
+        if (d != dist[v]) continue;
+        for (pair<W, int> p : edges[v]) {
+            int u = p.second;
+            if (dist[u] > d + p.first) {
+                dist[u] = d + p.first;
+                queue.push(make_pair(dist[u], u));
+            }
+        }
+    }
+    return infinity;
+}
+
+float get_distance_between_labels(int l1, int l2, unordered_map<int, set<int>> &lbl_to_ver) {
+    vector<W> dist(n, infinity);
+    PQ queue;
+
+    for (int i: lbl_to_ver[l1]) {
+        dist[i] = 0;
+        queue.push(make_pair(0, i));
+    }
+    while (!queue.empty()) {
+        pair<W, int> curr = queue.top();
+        queue.pop();
+        int v = curr.second;
+        W d = curr.first;
+        if (labels[v] == l2) return d;
+        if (d != dist[v]) continue;
+        for (pair<W, int> p : edges[v]) {
+            int u = p.second;
+            if (dist[u] > d + p.first) {
+                dist[u] = d + p.first;
+                queue.push(make_pair(dist[u], u));
+            }
+        }
+    }
+    return infinity;
+}
+
+pair<int, int> get_border_vertices() {
+    int lv = -1, rv = -1;
+    W lx = 10000, rx = 10000;
+    for (int i=0; i<n; i++) {
+        if (coords[i].first < lx && labels[i] == 0) {
+            lx = coords[i].first;
+            lv = i;
+        }
+        if (coords[i].first > rx && labels[i] == 0) {
+            rx = coords[i].first;
+            rv = i;
+        }
+    }
+    return make_pair(lv, rv);
+}
+
+void get_sorted_by_distance_from_vertex(vector<int> &vertices, int v) {
+    vector<W> dist(n, infinity);
+    dist[v] = 0;
+    int count=0;
+    PQ queue;
+    queue.push(make_pair(0, v));
+    while (!queue.empty()) {
+        pair<W, int> curr = queue.top();
+        queue.pop();
+        int v = curr.second;
+        W d = curr.first;
+        if (d != dist[v]) continue;
+        vertices[count] = v;
+        count++;
+        for (pair<W, int> p : edges[v]) {
+            int u = p.second;
+            if (dist[u] > d + p.first) {
+                dist[u] = d + p.first;
+                queue.push(make_pair(dist[u], u));
+            }
+        }
     }
 }
 
@@ -189,7 +348,7 @@ void parse_program_options(int argc, char* argv[]) {
                 print_help();
                 exit(1);
             }
-            if (sscanf(argv[i], "%d", &v) && v >= 0 && v/100 <= 1 && (v/10)%10 <= 1 && v%10 <= 1) {
+            if (sscanf(argv[i], "%d", &v) && v >= 1 && v/100 <= 1 && (v/10)%10 <= 1 && v%10 <= 1) {
                 allowed_queries = v;
             } else {
                 fprintf(stderr, "Error while parsing -Q option, invalid value\n\n");
@@ -219,7 +378,7 @@ void parse_program_options(int argc, char* argv[]) {
                 exit(1);
             }
             float v=-1;
-            if (sscanf(argv[i], "%f", &v) && v >= 0) {
+            if (sscanf(argv[i], "%f", &v) && v >= 0 && v <= 1) {
                 option_start = v;
             } else {
                 fprintf(stderr, "Error while parsing -CS option, invalid value\n\n");
@@ -234,7 +393,7 @@ void parse_program_options(int argc, char* argv[]) {
                 print_help();
                 exit(1);
             }
-            if (sscanf(argv[i], "%f", &v) && v >= 0) {
+            if (sscanf(argv[i], "%f", &v) && v >= 0 && v <= 1) {
                 option_end = v;
             } else {
                 fprintf(stderr, "Error while parsing -CE option, invalid value\n\n");
@@ -263,77 +422,323 @@ void generate_query_test() {
     if (option_start == -1) option_start = 0;
     if (option_end == -1) option_end = 1;
 
-    // Calculate queries
-    if (allowed_queries%10 == 1) {
-        calc_some_vertex_vertex_queries(vv_queries);
-    }
-    if ((allowed_queries/10)%10 == 1) {
-        calc_all_vertex_label(vl_queries);
-    }
-    if (allowed_queries/100 == 1) {
-        calc_all_label_label_dist(ll_queries);
-    }
+    vector<vector<pair<W, pair<int, int>>>> vv_buckets(sample_count), vl_buckets(sample_count), ll_buckets(sample_count);
 
-    // Sort by distance
-    auto cmp = [](pair<W, pair<int, int> > &a, pair<W, pair<int, int> > &b) { return a.first < b.first; };
-    sort(vv_queries.begin(), vv_queries.end(), cmp);
-    sort(vl_queries.begin(), vl_queries.end(), cmp);
-    sort(ll_queries.begin(), ll_queries.end(), cmp);
+    // Calculate queries
+    if (allowed_vv()) {
+        calc_some_vertex_vertex_queries(vv_queries);
+        split_by_distance(vv_queries, vv_buckets, option_start, option_end);
+    }
+    if (allowed_vl()) {
+        calc_all_vertex_label(vl_queries);
+        split_by_distance(vl_queries, vl_buckets, option_start, option_end);
+    }
+    if (allowed_ll()) {
+        calc_all_label_label_dist(ll_queries);
+        split_by_distance(ll_queries, ll_buckets, option_start, option_end);
+    }
 
     // Setup rng
-    size_t queries_size = vv_queries.size() + vl_queries.size() + ll_queries.size();
+//    size_t queries_size = vv_queries.size() + vl_queries.size() + ll_queries.size();
     auto rd = default_random_engine();
-    auto vec_rng = uniform_int_distribution<int>(0, queries_size-1);
+//    auto vec_rng = uniform_int_distribution<int>(0, queries_size-1);
 
     for (int i=0; i<sample_count; i++) {
 
-        // Setup query randomizers for different query types.
-        // Option start and option end define percentile range, samples start from shortest queries, end longest
-        float start_percentile = option_start + ((float)i/(float)sample_count)*(option_end-option_start);
-        float end_percentile = option_start + ((float)(i+1)/(float)sample_count)*(option_end-option_start);
-        auto vv_rng = uniform_int_distribution<int>(vv_queries.size()*start_percentile , vv_queries.size()*end_percentile - 1);
-        auto vl_rng = uniform_int_distribution<int>(vl_queries.size()*start_percentile , vl_queries.size()*end_percentile - 1);
-        auto ll_rng = uniform_int_distribution<int>(ll_queries.size()*start_percentile , ll_queries.size()*end_percentile - 1);
+        // Not by buckets
+//        // Setup query randomizers for different query types.
+//        // Option start and option end define percentile range, samples start from shortest queries, end longest
+//        float start_percentile = option_start + ((float)i/(float)sample_count)*(option_end-option_start);
+//        float end_percentile = option_start + ((float)(i+1)/(float)sample_count)*(option_end-option_start);
+//        auto vv_rng = uniform_int_distribution<int>(vv_queries.size()*start_percentile , vv_queries.size()*end_percentile - 1);
+//        auto vl_rng = uniform_int_distribution<int>(vl_queries.size()*start_percentile , vl_queries.size()*end_percentile - 1);
+//        auto ll_rng = uniform_int_distribution<int>(ll_queries.size()*start_percentile , ll_queries.size()*end_percentile - 1);
 
+        // By buckets
+        auto vv_rng = uniform_int_distribution<int>(0, vv_buckets[i].size() - 1);
+        auto vl_rng = uniform_int_distribution<int>(0, vl_buckets[i].size() - 1);
+        auto ll_rng = uniform_int_distribution<int>(0, ll_buckets[i].size() - 1);
+        auto vec_rng = uniform_int_distribution<int>(0, vv_buckets[i].size() + vl_buckets[i].size() + ll_buckets[i].size() - 1);
+        int hmm=1;
+        while (vv_buckets[i].size() + vl_buckets[i].size() + ll_buckets[i].size() == 0) {
+            if (i+hmm >= 0 && i+hmm<sample_count) i+=hmm;
+            if (hmm>0) hmm = -hmm;
+            else hmm = -hmm + 1;
+        }
+        assert(i>=0 && i<sample_count && vv_buckets[i].size() + vl_buckets[i].size() + ll_buckets[i].size() > 0);
+
+        // Not by buckets
+//        for (int j=0; j<sample_size; j++) {
+//            // Select vector to random query from
+//            int r = vec_rng(rd);
+//            if (r < (int)vv_queries.size()) {
+//                int q = vv_rng(rd);
+//                // Query type (0: vertex-vertx), start vertex, end vertex, answer
+//                printf("0 %d %d %f\n", vv_queries[q].second.first, vv_queries[q].second.second, vv_queries[q].first);
+//            } else if (r < (int)vv_queries.size() + (int)vl_queries.size()){
+//                int q = vl_rng(rd);
+//                // Query type (0: vertex-vertx), start vertex, end vertex, answer
+//                printf("1 %d %d %f\n", vl_queries[q].second.second, vl_queries[q].second.first, vl_queries[q].first);
+//            } else {
+//                int q = ll_rng(rd);
+//                // Query type (0: vertex-vertx), start vertex, end vertex, answer
+//                printf("2 %d %d %f\n", ll_queries[q].second.first, ll_queries[q].second.second, ll_queries[q].first);
+//            }
+//        }
+
+        // By buckets
         for (int j=0; j<sample_size; j++) {
             // Select vector to random query from
             int r = vec_rng(rd);
-            if (r < (int)vv_queries.size()) {
+            if (r < (int)vv_buckets[i].size()) {
                 int q = vv_rng(rd);
                 // Query type (0: vertex-vertx), start vertex, end vertex, answer
-                printf("0 %d %d %f\n", vv_queries[q].second.first, vv_queries[q].second.second, vv_queries[q].first);
-            } else if (r < (int)vv_queries.size() + (int)vl_queries.size()){
+                printf("0 %d %d %f\n", vv_buckets[i][q].second.first, vv_buckets[i][q].second.second, vv_buckets[i][q].first);
+            } else if (r < (int)vv_buckets[i].size() + (int)vl_buckets[i].size()){
                 int q = vl_rng(rd);
-                // Query type (0: vertex-vertx), start vertex, end vertex, answer
-                printf("1 %d %d %f\n", vl_queries[q].second.second, vl_queries[q].second.first, vl_queries[q].first);
+                // Query type (1: vertex-label), start vertex, end label, answer
+                printf("1 %d %d %f\n", vl_buckets[i][q].second.second, vl_buckets[i][q].second.first, vl_buckets[i][q].first);
             } else {
                 int q = ll_rng(rd);
-                // Query type (0: vertex-vertx), start vertex, end vertex, answer
-                printf("2 %d %d %f\n", ll_queries[q].second.first, ll_queries[q].second.second, ll_queries[q].first);
+                // Query type (2: label-label), start label, end label, answer
+                printf("2 %d %d %f\n", ll_buckets[i][q].second.first, ll_buckets[i][q].second.second, ll_buckets[i][q].first);
             }
         }
     }
 }
 
 void generate_distance_vs_set_label_test() {
-    // TODO
+    vector<pair<W, pair<int, int>>> vv_queries;
+    unordered_map<int, set<int>> lbl_to_ver;
+    if (option_start == -1) option_start = 0;
+    if (option_end == -1) option_end = 1;
+
+    // Calculate queries
+    if (allowed_vv()) {
+        calc_some_vertex_vertex_queries(vv_queries);
+    }
+
+    for (int i=0; i < (int)labels.size(); i++) {
+        if (labels[i] > 0) {
+            lbl_to_ver[labels[i]].insert(i);
+        }
+    }
+
+    auto rd = default_random_engine();
+    auto vv_query_rng = uniform_int_distribution<int>(0, (int)vv_queries.size()-1);
+    auto distance_query_type_rng = uniform_int_distribution<int>(0, 2);
+    auto vertex_rng = uniform_int_distribution<int>(0, n-1);
+    auto label_rng = uniform_int_distribution<int>(1, (int)1.2*max_label-2);
+
+    for (int i=0; i<sample_count; i++) {
+
+        // Setup query randomizer for query type
+        float setLabel_probability = option_start + ((float)i/(float)(sample_count-1))*(option_end-option_start);
+        auto query_type_rng = uniform_real_distribution<float>(0, 1); // TODO maybe other than linear change in probability
+
+        for (int j=0; j<sample_size; j++) {
+            // Select vector to random query from
+            float q = query_type_rng(rd);
+            if (q < setLabel_probability) {
+                // Generate set label query
+                int l = label_rng(rd), v = vertex_rng(rd);
+                if (labels[v] != 0) {
+                    lbl_to_ver[labels[v]].erase(v);
+                }
+                if (l != 0) {
+                    lbl_to_ver[l].insert(v);
+                }
+                labels[v] = l;
+                printf("3 %d %d 0\n", v, l);
+
+            } else {
+                // Generate distance query;
+                int query_type = distance_query_type_rng(rd);
+                while (!((query_type == 0 && allowed_vv()) || (query_type == 1 && allowed_vl()) || (query_type == 2 && allowed_ll()))) {
+                    query_type = distance_query_type_rng(rd);
+                }
+                if (query_type == 0) {
+                    int vvq = vv_query_rng(rd);
+                    // Query type (0: vertex-vertx), start vertex, end vertex, answer
+                    printf("0 %d %d %f\n", vv_queries[vvq].second.first, vv_queries[vvq].second.second, vv_queries[vvq].first);
+                } else if (query_type == 1){
+                    int l = label_rng(rd), v = vertex_rng(rd);
+                    while (l >= max_label) l = label_rng(rd);
+                    // Query type (1: vertex-label), start vertex, end label, answer
+                    printf("1 %d %d %f\n", v, l, get_distance_to_label(v, l));
+                } else {
+                    int l1 = label_rng(rd), l2 = label_rng(rd);
+                    while (l1 >= max_label) l1 = label_rng(rd);
+                    while (l2 >= max_label) l2 = label_rng(rd);
+                    // Query type (2: label-label), start label, end label, answer
+                    printf("2 %d %d %f\n", l1, l2, get_distance_between_labels(l1, l2, lbl_to_ver));
+                }
+            }
+        }
+    }
 }
 
 void generate_new_label_test() {
-    // TODO
+    vector<pair<W, pair<int, int>>> queries_v_left, queries_l_left; // , queries_v_right, queries_l_right;
+    vector<vector<pair<W, pair<int, int>>>> buckets_v_left(10), buckets_l_left(10); //, buckets_v_right(10), buckets_l_right(10);
+    vector<int> closest_left(n); //, closest_right(n);
+    unordered_map<int, set<int>> lbl_to_ver;
+
+    for (int i=0; i < (int)labels.size(); i++) {
+        if (labels[i] > 0) {
+            lbl_to_ver[labels[i]].insert(i);
+        }
+    }
+
+    // Get vertices most on both left and rigth
+    int left_v, right_v, left_lbl = max_label; // , right_lbl = max_label+1;
+    tie(left_v, right_v)= get_border_vertices();
+
+    // Get distances from those vertices
+    if (allowed_vl()) {
+        split_by_distance(get_queries_to_vertices(left_v), buckets_v_left);
+    }
+//    split_by_distance(get_queries_to_vertices(right_v), buckets_v_right);
+
+    // Get distances to labels
+    if (allowed_ll()) {
+        split_by_distance(get_queries_to_labels(left_v, lbl_to_ver), buckets_l_left);
+    }
+//    split_by_distance(get_queries_to_labels(right_v, lbl_to_ver), buckets_l_right);
+
+    // Get list of vertices sorted by distance from border vertices
+    get_sorted_by_distance_from_vertex(closest_left, left_v);
+//    get_sorted_by_distance_from_vertex(closest_right, right_v);
+
+    if (option_start == -1) option_start = 0;
+    if (option_end == -1) option_end = 0.5;
+
+    // TODO Hmm... better idea ? now only left vertex used
+
+    auto rd = default_random_engine();
+    auto bucket_rng = uniform_int_distribution<int>(0, 9);
+
+
+    uniform_int_distribution<int> query_left_rng[10];
+    for (int i=0; i<10; i++) {
+        query_left_rng[i] = uniform_int_distribution<int>(0, buckets_v_left[i].size() + buckets_l_left[i].size() - 1);
+    }
+
+    int ver_count = 0;
+
+//    option_end = min((float)0.5, option_end); // TODO error or not ? change limit ?
+
+    for (int i=0; i<sample_count; i++) {
+        float labeled_size = ((float)(i+1)/(float)sample_count)*(option_end)*n;
+        int j=0;
+        while (j<sample_size && ver_count < (int)ceil(labeled_size)) {
+            // Generate set label query
+            int l = left_lbl;
+            int v = closest_left[ver_count];
+            ver_count++;
+            if (labels[v] != 0) {
+                lbl_to_ver[labels[v]].erase(v);
+            }
+            lbl_to_ver[l].insert(v);
+            labels[v] = l;
+            printf("3 %d %d 0\n", v, l);
+            j++;
+        }
+        while (j<sample_size) {
+            int b = bucket_rng(rd);
+            int q = query_left_rng[b](rd);
+            // Generate distance query;
+            if (q < (int)buckets_v_left[b].size()) {
+                int v = buckets_v_left[b][q].second.second;
+                // Query type (1: vertex-label), start label, end label, answer
+                printf("1 %d %d %f\n", v, left_lbl, get_distance_to_label(v, left_lbl));
+            } else {
+                q -= buckets_v_left.size();
+                int l2 = buckets_l_left[b][q].second.second;
+                auto ll_rng = uniform_int_distribution<int>(0, buckets_l_left[b].size()-1);
+                while (lbl_to_ver[l2].empty()) l2 = buckets_l_left[b][ll_rng(rd)].second.second;
+
+                assert(l2 != left_lbl);
+                // Query type (2: label-label), start label, end label, answer
+                printf("2 %d %d %f\n", l2, left_lbl, get_distance_between_labels(l2, left_lbl, lbl_to_ver));
+            }
+            j++;
+        }
+    }
 }
 
-void generate_build_labels_test() {
-    // TODO
+void generate_build_labels_test(vector<pair<int, int>> &set_labels) {
+    vector<pair<W, pair<int, int>>> vv_queries;
+    unordered_map<int, set<int>> lbl_to_ver;
+
+    // Calculate queries
+    if (allowed_vv()) {
+        calc_some_vertex_vertex_queries(vv_queries);
+    }
+
+    // Clear labels
+    for (auto &l: labels) {
+        l = 0;
+    }
+
+    auto vec_vec_rng = uniform_int_distribution<int>(0, vv_queries.size()-1);
+    auto vec_rng = uniform_int_distribution<int>(0, n-1);
+    auto lbl_rng = uniform_int_distribution<int>(0, max_label-1);
+    auto query_type_rng = uniform_int_distribution<int>(0, 2);
+    auto rd = default_random_engine();
+
+    int lbl_count=0;
+    for (int i=0; i<sample_count; i++) {
+        float to_label = ((float)(i+1)/(float)sample_count)*set_labels.size();
+        int j=0;
+        while (j<sample_size && lbl_count < (int)ceil(to_label)) {
+            // Generate set label query
+            int v = set_labels[lbl_count].first;
+            int l = set_labels[lbl_count].second;
+
+            lbl_count++;
+            lbl_to_ver[l].insert(v);
+            labels[v] = l;
+            printf("3 %d %d 0\n", v, l);
+            j++;
+        }
+        while (j<sample_size) {
+            int qt = query_type_rng(rd);
+            while (!((qt == 0 && allowed_vv()) || (qt == 1 && allowed_vl()) || (qt == 2 && allowed_ll()))) {
+                qt = query_type_rng(rd);
+            }
+
+            if (qt == 0) {
+                int q = vec_vec_rng(rd);
+                // Query type (0: vertex-vertx), start vertex, end vertex, answer
+                printf("0 %d %d %f\n", vv_queries[q].second.first, vv_queries[q].second.second, vv_queries[q].first);
+            } else if (qt == 1){
+                int v = vec_rng(rd);
+                int l = lbl_rng(rd);
+                while (lbl_to_ver[l].empty()) l = lbl_rng(rd);
+                // Query type (0: vertex-vertx), start vertex, end vertex, answer
+                printf("1 %d %d %f\n", v, l, get_distance_to_label(v, l));
+            } else {
+                int l1 = lbl_rng(rd);
+                int l2 = lbl_rng(rd);
+                while (lbl_to_ver[l1].empty()) l1 = lbl_rng(rd);
+                while (lbl_to_ver[l2].empty()) l2 = lbl_rng(rd);
+                // Query type (0: vertex-vertx), start vertex, end vertex, answer
+                printf("2 %d %d %f\n", l1, l2, get_distance_between_labels(l1, l2, lbl_to_ver));
+            }
+            j++;
+        }
+    }
 }
 
 
 int main(int argc, char* argv[])
 {
     parse_program_options(argc, argv);
-//    printf("sc: %d   ss: %d   alowed: %d   type: %d   WasDist: %d  optionSt: %f  optionEn: %f   path: %s\n",
-//    sample_count, sample_size, allowed_queries, test_type, weights_as_distance, option_start, option_end, graph_path);
-//    return 0;
+
+    if (option_end != -1 && option_start > option_end) {
+        fprintf(stderr, "Error start constraint must be lower than end constraint");
+    }
 
     FILE *pfile;
     pfile = fopen(graph_path, "r");
@@ -346,7 +751,7 @@ int main(int argc, char* argv[])
     // Read graph
     {
         vector<pair<int, int>> eedges;
-        read_graph(pfile, n, m, max_label, max_speed, eedges, types, max_speeds, distances, labels, cords);
+        read_graph(pfile, n, m, max_label, max_speed, eedges, types, max_speeds, distances, labels, coords);
         fclose(pfile);
 
         edges.resize(n);
@@ -366,27 +771,48 @@ int main(int argc, char* argv[])
         }
     }
 
-    // Print sample count, sample size, type, allowed queries
-    printf("%d %d %d %d %d\n", sample_count, sample_size, test_type, allowed_queries, weights_as_distance);
     switch (test_type) {
         case 0: {
             // Generate standard, distance queries only test
+            printf("%d %d %d %d %d\n", sample_count, sample_size, test_type, allowed_queries, weights_as_distance);
             generate_query_test();
             break;
         }
         case 1: {
             // Generate test with changing ratio distance queries to set label queries
+            printf("%d %d %d %d %d\n", sample_count, sample_size, test_type, allowed_queries, weights_as_distance);
             generate_distance_vs_set_label_test();
             break;
         }
         case 2: {
             // Generate test with setting new label in one place then removing it
+            if (option_end > 0.1) {
+                fprintf(stderr, "Error end constraint cannot by higher than 0.1 for test type 2\n");
+                exit(1);
+            }
+            if (!allowed_vl() && !allowed_ll()) {
+                fprintf(stderr, "Error vertex-label or label-label queries must by allowed for test type 2\n");
+                exit(1);
+            }
+            sample_size += option_end*n;
+
+            printf("%d %d %d %d %d\n", sample_count, sample_size, test_type, allowed_queries, weights_as_distance);
             generate_new_label_test();
             break;
         }
         case 3: {
-            // Generate add labels to clean nodes test
-            generate_build_labels_test();
+            // Generate test starting with clear graph, then add labels to it
+            vector<pair<int, int>> set_labels;
+            for (int i=0; i<n; i++) {
+                if (labels[i] > 0) {
+                    set_labels.emplace_back(i, labels[i]);
+                }
+            }
+            random_shuffle(set_labels.begin(), set_labels.end());
+            sample_size += ceil(set_labels.size()/sample_count);
+
+            printf("%d %d %d %d %d\n", sample_count, sample_size, test_type, allowed_queries, weights_as_distance);
+            generate_build_labels_test(set_labels);
             break;
         }
     }

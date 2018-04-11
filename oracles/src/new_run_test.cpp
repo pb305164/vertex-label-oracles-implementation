@@ -9,6 +9,7 @@
 #include "osrm_oracle.h"
 #include "hierarchy_oracle.h"
 #include "hierarchy_oracle_light.h"
+#include "hierarchy_oracle_light_path.h"
 
 #include <chrono>
 
@@ -64,9 +65,10 @@ void print_help() {
                     "                       7: 3Aprox\n"
                     "                       8: Hierarchy\n"
                     "                       9: HierarchyLight\n"
-                    "                      10: Osrm\n"
-                    "                      11: Dijkstra\n"
-                    "                      12: Astar\n"
+                    "                      10: HierarchyLightPath\n"
+                    "                      11: Osrm\n"
+                    "                      12: Dijkstra\n"
+                    "                      13: Astar\n"
 
                     "  -EPS float   : Epsilon value for planar oracles (default = 1.0)\n\n"
                     "  -MPD float   : Minimal distances between portals for hierarchal oracles (default 0 for light, 15 for full)\n\n"
@@ -223,7 +225,7 @@ void run_all_queries(T &oracle, vector<tuple<int, int, int, float>> &queries)
             exit(1);
         }
         count++;
-        if (count%sample_size==0) printf("%ld", get_mem_usage());
+        if (count%sample_size==0) printf("%ld\n", get_mem_usage());
     }
 }
 
@@ -249,7 +251,7 @@ void run_VL_SL_queries(T &oracle, vector<tuple<int, int, int, float>> &queries)
             exit(1);
         }
         count++;
-        if (count%sample_size==0) printf("%ld", get_mem_usage());
+        if (count%sample_size==0) printf("%ld\n", get_mem_usage());
     }
 }
 
@@ -275,7 +277,7 @@ void run_VV_VL_queries(T &oracle, vector<tuple<int, int, int, float>> &queries)
             exit(1);
         }
         count++;
-        if (count%sample_size==0) printf("%ld", get_mem_usage());
+        if (count%sample_size==0) printf("%ld\n", get_mem_usage());
     }
 }
 
@@ -301,7 +303,7 @@ void run_LL_SL_queries(T &oracle, vector<tuple<int, int, int, float>> &queries)
             exit(1);
         }
         count++;
-        if (count%sample_size==0) printf("%ld", get_mem_usage());
+        if (count%sample_size==0) printf("%ld\n", get_mem_usage());
     }
 }
 
@@ -329,7 +331,7 @@ void run_VV_VL_SL_queries(T &oracle, vector<tuple<int, int, int, float>> &querie
             exit(1);
         }
         count++;
-        if (count%sample_size==0) printf("%ld", get_mem_usage());
+        if (count%sample_size==0) printf("%ld\n", get_mem_usage());
     }
 }
 
@@ -357,7 +359,7 @@ void run_VL_LL_SL_queries(T &oracle, vector<tuple<int, int, int, float>> &querie
             exit(1);
         }
         count++;
-        if (count%sample_size==0) printf("%ld", get_mem_usage());
+        if (count%sample_size==0) printf("%ld\n", get_mem_usage());
     }
 }
 
@@ -385,7 +387,7 @@ void run_VV_VL_LL_queries(T &oracle, vector<tuple<int, int, int, float>> &querie
             exit(1);
         }
         count++;
-        if (count%sample_size==0) printf("%ld", get_mem_usage());
+        if (count%sample_size==0) printf("%ld\n", get_mem_usage());
     }
 }
 
@@ -551,6 +553,16 @@ int main(int argc, char* argv[]) {
 
         case 10: {
             auto t1 = std::chrono::steady_clock::now();
+            HierarchyOracleLightPath oracle(edges, distances, labels, types, 0, min_port_dist);
+            auto t2 = std::chrono::steady_clock::now();
+            build_time = t2 - t1;
+            printf("%d %d %lf %ld\n", sample_count, sample_size, build_time.count(), get_mem_usage());
+            run_VV_VL_SL_queries(oracle, queries);
+            break;
+        }
+
+        case 11: {
+            auto t1 = std::chrono::steady_clock::now();
             OsrmOracle oracle(osrm_path, max_label, coords, labels);
             auto t2 = std::chrono::steady_clock::now();
             build_time = t2 - t1;
@@ -559,7 +571,7 @@ int main(int argc, char* argv[]) {
             break;
         }
 
-        case 11: {
+        case 12: {
             auto t1 = std::chrono::steady_clock::now();
             DijkstraOracle oracle(n, m, max_label, edges, distances, labels);
             auto t2 = std::chrono::steady_clock::now();
@@ -569,7 +581,7 @@ int main(int argc, char* argv[]) {
             break;
         }
 
-        case 12: {
+        case 13: {
             auto t1 = std::chrono::steady_clock::now();
             AstarOracle oracle(n, m, max_label, max_speed, edges, distances, labels, coords);
             auto t2 = std::chrono::steady_clock::now();

@@ -1,34 +1,29 @@
 #ifndef OSRM_OSRMORACLE_H
 #define OSRM_OSRMORACLE_H
 
-
-
 #include "osrm/engine_config.hpp"
-
 #include "osrm/osrm.hpp"
 
-#include <cstdio>
-#include <utility>
 #include <vector>
-#include <experimental/propagate_const>
-#include <memory>
+#include <set>
 
-using std::pair;
-using std::vector;
 
 class OsrmOracle {
 private:
     osrm::EngineConfig config;
     const osrm::OSRM osrm;
-    vector<pair<float, float> > coords;
-    vector<vector<int>> lbl_to_ver;
+    std::vector<std::pair<float, float> > coords;
+    std::vector<int> labels;
+    std::vector<std::set<int>> lbl_to_ver;
 
 public:
-    OsrmOracle(char *osrm_file, int max_label, std::vector<pair<float, float> > &_coords, std::vector<int> labels);
+    OsrmOracle(char *osrm_file, int max_label, std::vector<std::pair<float, float> > &_coords, std::vector<int> &_labels);
 
     float distanceToVertex(int s, int t);
-    pair<float, int> distanceToLabel(int s, int l);
-    pair<float, pair<int, int> > distanceBetweenLabels(int l1, int l2);
+    std::pair<float, int> distanceToLabel(int s, int l);
+    std::pair<float, std::pair<int, int> > distanceBetweenLabels(int l1, int l2);
+    void setLabel(int v, int l);
+    int labelOf(int v);
 };
 
 
