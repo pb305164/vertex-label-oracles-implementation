@@ -207,7 +207,6 @@ void read_graph_edges(pugi::xml_document &doc,
 
     // Select all roads
     pugi::xpath_node_set roads = doc.select_nodes(road_query.c_str());
-    int max_node_id=-1;
 
     // Iterate though roads, add nodes and edges to graph
     for (pugi::xpath_node_set::const_iterator it = roads.begin(); it != roads.end(); ++it) {
@@ -226,7 +225,6 @@ void read_graph_edges(pugi::xml_document &doc,
         int prev_node = -1;
         for (pugi::xml_node node = road.child("nd"); node; node = node.next_sibling("nd")) {
             int cur_node = get_new_id(osm_id_to_new_id, stoull(node.attribute("ref").value()));
-            if (cur_node > max_node_id) max_node_id = cur_node;
             if (nodes.find(cur_node) == nodes.end()) nodes[cur_node] = all_nodes[cur_node];
             if (prev_node != -1 && prev_node != cur_node) {
                 mpreal dist = calc_distance(all_nodes[prev_node].lat, all_nodes[prev_node].lon, all_nodes[cur_node].lat, all_nodes[cur_node].lon);
@@ -236,7 +234,15 @@ void read_graph_edges(pugi::xml_document &doc,
             prev_node = cur_node;
         }
     }
-    max_node_id++;
+}
+
+
+// Remove all other components then the biggest one thus making graph connected
+void filter_max_component(unordered_mapB<int, Node> &nodes, unordered_mapB<int, set<Edge> > &edges) {
+    int max_node_id = -1;
+    for (auto &p: nodes) {
+        if (p.first > max_node_id) max_node_id = p.first;
+    }
 
     // Find biggest consistent component of the graph
     FindUnion f(max_node_id);
@@ -434,6 +440,7 @@ tuple<unordered_mapB<int, Node>, unordered_mapB<int, set<Edge>>, mpreal> read_gr
     cache_nodes(doc, all_nodes, osm_id_to_new_id);
     read_graph_edges(doc, max_max_speed, nodes, all_nodes, edges, osm_id_to_new_id);
     if (_add_labels) add_labels(doc, all_nodes, nodes, edges, osm_id_to_new_id);
+    filter_max_component(nodes, edges);
     if (_merge_edges) merge_edges(nodes, edges);
     remap_ids(nodes, edges);
     return make_tuple(nodes, edges, max_max_speed);

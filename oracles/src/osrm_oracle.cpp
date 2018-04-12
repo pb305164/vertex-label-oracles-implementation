@@ -1,21 +1,13 @@
-//
-// Created by banan on 28/09/17.
-//
-
 #include "osrm_oracle.h"
-#include "osrm/status.hpp"
 #include "osrm/json_container.hpp"
 #include "osrm/coordinate.hpp"
 #include "osrm/match_parameters.hpp"
 #include "osrm/nearest_parameters.hpp"
-#include "osrm/route_parameters.hpp"
 #include "osrm/table_parameters.hpp"
-#include "osrm/trip_parameters.hpp"
 
-#include <exception>
-#include <utility>
 
 using std::make_pair;
+using std::pair;
 using namespace osrm;
 
 
@@ -33,13 +25,16 @@ EngineConfig prepareConfig(char *osrm_file, EngineConfig &config) {
 }
 
 
-OsrmOracle::OsrmOracle(char *osrm_file, int max_label, std::vector<pair<float, float> > &_coords, std::vector<int> labels):
+OsrmOracle::OsrmOracle(char *osrm_file, int max_label, std::vector<pair<float, float> > &_coords, std::vector<int> &_labels):
         osrm{(prepareConfig(osrm_file, config), config)},
         coords(_coords.size()),
+        labels(_labels),
         lbl_to_ver(max_label) {
     coords.resize(_coords.size());
     for (int i=0; i < (int)labels.size(); i++) {
-        lbl_to_ver[labels[i]].push_back(i);
+        if (labels[i] > 0) {
+            lbl_to_ver[labels[i]].insert(i);
+        }
     }
     NearestParameters params;
     json::Object result;
@@ -54,6 +49,7 @@ OsrmOracle::OsrmOracle(char *osrm_file, int max_label, std::vector<pair<float, f
         coords[i]= make_pair((float)loc.at(1).get<json::Number>().value, (float)loc.at(0).get<json::Number>().value);
     }
 }
+
 
 float OsrmOracle::distanceToVertex(int s, int t) {
     RouteParameters params;
@@ -70,6 +66,7 @@ float OsrmOracle::distanceToVertex(int s, int t) {
         return -1;
     }
 }
+
 
 pair<float, int> OsrmOracle::distanceToLabel(int s, int l) {
     TableParameters params;
@@ -102,6 +99,7 @@ pair<float, int> OsrmOracle::distanceToLabel(int s, int l) {
     }
     return make_pair(-1, -1);
 }
+
 
 pair<float, pair<int, int> > OsrmOracle::distanceBetweenLabels(int l1, int l2) {
     TableParameters params;
@@ -141,3 +139,13 @@ pair<float, pair<int, int> > OsrmOracle::distanceBetweenLabels(int l1, int l2) {
     }
     return make_pair(-1, make_pair(-1, -1));}
 
+
+void OsrmOracle::setLabel(int v, int l) {
+    lbl_to_ver[labels[v]].erase(v);
+    labels[v] = l;
+    lbl_to_ver[l].insert(v);
+}
+
+int OsrmOracle::labelOf(int v) {
+    return labels[v];
+}

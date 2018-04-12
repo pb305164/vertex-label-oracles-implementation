@@ -8,8 +8,12 @@
 #include "dijkstra_oracle.h"
 #include "astar_oracle.h"
 #include "osrm_oracle.h"
+#include "hierarchy_oracle.h"
+#include "hierarchy_oracle_light.h"
+#include "hierarchy_oracle_light_path.h"
 
 #include <chrono>
+
 
 using std::map;
 
@@ -25,7 +29,7 @@ tuple<W, W, float, float, int, std::chrono::duration<double, std::milli> >  test
         auto t1 = std::chrono::steady_clock::now();
         result = oracle.distanceToVertex(p.second.second, p.second.first);
         auto t2 = std::chrono::steady_clock::now();
-        if (result != -1) {
+        if (result != -1 && result != infinity) {
             if(p.first==0) p.first=0.0000001;
             d_ratio += result/p.first;
             max_ratio = max(max_ratio, result/p.first);
@@ -156,6 +160,30 @@ void run_all_tests(T &oracle, vector<pair<W, pair<int, int> > > tests[3][3])
     run_all_ll_tests(oracle, tests);
 }
 
+std::string exec(const char* cmd) {
+    char buffer[128];
+    std::string result = "";
+    FILE* pipe = popen(cmd, "r");
+    if (!pipe) throw std::runtime_error("popen() failed!");
+    try {
+        while (!feof(pipe)) {
+            if (fgets(buffer, 128, pipe) != NULL)
+                result += buffer;
+        }
+    } catch (...) {
+        pclose(pipe);
+        throw;
+    }
+    pclose(pipe);
+    return result;
+}
+
+long get_mem_size() {
+    char cmd[100];
+    sprintf(cmd, "pmap %d | tail -n 1 | awk -v N=2 '{print $N}' | rev | cut -c 2- | rev", ::getpid());
+    return stol(exec(cmd));
+}
+
 
 int main(int argc, char* argv[]) {
     vector<pair<int, int>> edges;
@@ -164,9 +192,10 @@ int main(int argc, char* argv[]) {
     vector<W> distances;
     vector<int> labels;
     W max_speed;
-    vector<pair<W,W> > coords;
+    vector<pair<W, W>> coords;
     vector<pair<W, pair<int, int> > > tests[3][3];
     int n, m, max_label;
+
     W EPS = 1.;
 
 
@@ -220,7 +249,7 @@ int main(int argc, char* argv[]) {
     printf("Max label size: %d, Min label size: %d\n",maxlab,minlab);
 
     // Change distance to time (TODO add as program option)
-    for (int i=0; i<m; i++) {
+    for (int i = 0; i < m; i++) {
         distances[i] = distances[i] / max_speeds[i];
     }
 
@@ -233,7 +262,7 @@ int main(int argc, char* argv[]) {
     }
 
     // Read 3 types of queries, vertex-vertex, vertex-label, label-label
-    for (int i=0; i<3; i++) {
+    for (int i = 0; i < 3; i++) {
         int long_size, med_size, short_size, a, b;
         W d;
 
@@ -270,6 +299,9 @@ int main(int argc, char* argv[]) {
 //        printf("%d  %d\n", e.first, e.second);
 //    }
 
+
+    long mem_begin = get_mem_size();
+    printf("pamięć przed: %ldK\n", get_mem_size());
 
     std::chrono::duration<double, std::milli> build_time;
 
@@ -459,5 +491,50 @@ int main(int argc, char* argv[]) {
     default:
         break;
     }
+
+
+    printf("HIERARCHY\n");
+    {
+        auto t1 = std::chrono::steady_clock::now();
+        HierarchyOracle oracle(edges, distances, labels, types);
+        auto t2 = std::chrono::steady_clock::now();
+        build_time = t2 - t1;
+        printf("Czas budowy: %lfs   pamięć: %ldK\n", build_time.count() / 1000, get_mem_size() - mem_begin);
+        run_all_tests(oracle, tests);
+        printf("pamięć po testach: %ldK\n", get_mem_size() - mem_begin);
+        printf("\n\n");
+    }
+
+    printf("pamięć pomiędzy: %ldK\n", get_mem_size());
+
+    printf("HIERARCHY LIGHT\n");
+    {
+        auto t1 = std::chrono::steady_clock::now();
+        HierarchyOracleLight oracle(edges, distances, labels, types);
+        auto t2 = std::chrono::steady_clock::now();
+        build_time = t2 - t1;
+        printf("Czas budowy: %lfs   pamięć: %ldK\n", build_time.count() / 1000, get_mem_size() - mem_begin);
+        run_all_vv_tests(oracle, tests);
+        run_all_vl_tests(oracle, tests);
+        printf("pamięć po testach: %ldK\n", get_mem_size() - mem_begin);
+        printf("\n\n");
+    }
+
+   printf("pamięć pomiędzy: %ldK\n", get_mem_size());
+
+    printf("HIERARCHY LIGHT Path\n");
+    {
+        auto t1 = std::chrono::steady_clock::now();
+        HierarchyOracleLightPath oracle(edges, distances, labels, types);
+        auto t2 = std::chrono::steady_clock::now();
+        build_time = t2 - t1;
+        printf("Czas budowy: %lfs   pamięć: %ldK\n", build_time.count() / 1000, get_mem_size() - mem_begin);
+        run_all_vv_tests(oracle, tests);
+        run_all_vl_tests(oracle, tests);
+        printf("pamięć po testach: %ldK\n", get_mem_size() - mem_begin);
+        printf("\n\n");
+    }
+
+    printf("pamięć pomiędzy: %ldK\n", get_mem_size());
 
 }

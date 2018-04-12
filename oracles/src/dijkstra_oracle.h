@@ -7,34 +7,30 @@
 #include <queue>
 #include <tuple>
 #include <limits>
+#include <set>
+#include <unordered_map>
 
-using std::vector;
-using std::pair;
-using std::tie;
-using std::min;
-using std::make_pair;
-using std::greater;
-using std::priority_queue;
+using namespace std;
 
 typedef pair<W, int> QEl;
 
-class DijkstraOracle{
+class DijkstraOracle {
 private:
     int n;
-    vector<vector<pair<int, W> > > edges;
-    vector<vector<int> > lbl_to_ver;
+    vector<vector<pair<int, W>>> edges;
+    unordered_map<int, set<int>> lbl_to_ver;
     vector<int> labels;
 
 public:
-    DijkstraOracle(int nn, int m, int max_label, vector<pair<int, int>>& eedges, vector<W>& weights, vector<int>& llabels):
-            n(nn), edges(nn), lbl_to_ver(max_label), labels(llabels)
-
-    {
-        for (int i=0; i < (int)labels.size(); i++) {
-            lbl_to_ver[labels[i]].push_back(i);
+    DijkstraOracle(int nn, int m, int max_label, vector<pair<int, int>> &eedges, vector<W> &weights, vector<int> &llabels):
+            n(nn), edges(nn), lbl_to_ver(max_label), labels(llabels) {
+        for (int i = 0; i < (int) labels.size(); i++) {
+            if (labels[i] != 0) {
+                lbl_to_ver[labels[i]].insert(i);
+            }
         }
 
-        for(int i=0; i<m; i++) {
+        for (int i = 0; i < m; i++) {
             int s, t;
             tie(s, t) = eedges[i];
             edges[s].push_back(make_pair(t, weights[i]));
@@ -120,6 +116,20 @@ public:
             }
         }
         return make_pair(-1, make_pair(-1, -1));
+    }
+
+    void setLabel(int v, int l) {
+        if (labels[v] != 0) {
+            lbl_to_ver[labels[v]].erase(v);
+        }
+        labels[v] = l;
+        if (l != 0) {
+            lbl_to_ver[l].insert(v);
+        }
+    }
+
+    int labelOf(int v) {
+        return labels[v];
     }
 };
 
