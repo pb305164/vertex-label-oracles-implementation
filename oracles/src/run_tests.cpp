@@ -428,6 +428,34 @@ int main(int argc, char* argv[]) {
             printf("\n\n");
         }
         break;
+    case 13:
+        printf("DYNAMIC PLANAR, EPS=1\n");
+        {
+            EPS=1.;
+            auto t1 = std::chrono::steady_clock::now();
+            DynamicPlanarOracle oracle(n, edges, distances, labels, EPS);
+            auto t2 = std::chrono::steady_clock::now();
+            build_time = t2 - t1;
+            printf("Czas budowy: %lfs\n", build_time.count()/1000);
+            run_all_vv_tests(oracle, tests);
+            run_all_vl_tests(oracle, tests);
+            printf("\n\n");
+        }
+        break;
+    case 14:
+        printf("DYNAMIC SIMPLE PLANAR, EPS=1\n");
+        {
+            EPS=1.;
+            auto t1 = std::chrono::steady_clock::now();
+            DynamicSimplePlanarOracle oracle(n, edges, distances, labels, EPS);
+            auto t2 = std::chrono::steady_clock::now();
+            build_time = t2 - t1;
+            printf("Czas budowy: %lfs\n", build_time.count()/1000);
+            run_all_vv_tests(oracle, tests);
+            run_all_vl_tests(oracle, tests);
+            printf("\n\n");
+        }
+        break;
     default:
         break;
     }

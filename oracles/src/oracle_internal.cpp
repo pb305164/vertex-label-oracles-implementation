@@ -41,6 +41,37 @@ getDistances(
 
 }
 
+void
+getDistParents(
+        const PlanarGraph& g,
+        int u,
+        vector<W> &dist,
+        vector<int> &parents) {
+
+    dist = vector<W>(g.vs().size(), infinity);
+    parents = vector<int>(g.vs().size(),-1);
+    typedef pair<W, int> QEl;
+    priority_queue< QEl, vector<QEl>, greater<QEl> > queue;
+
+    dist[u] = 0;
+    queue.push(make_pair(0, u));
+    while (!queue.empty()) {
+        QEl curr = queue.top(); queue.pop();
+        int u = curr.second;
+        W d = curr.first;
+        if (d != dist[u]) continue;
+        for (int e: g.vs()[u].edges) {
+            int v = g.opp(u, e);
+            if (dist[v] > d + g.es()[e].w) {
+                dist[v] = d + g.es()[e].w;
+                parents[v]=u;
+                queue.push(make_pair(dist[v], v));
+            }
+        }
+    }
+
+}
+
 pair<W, W>
 getStretch(
         const PlanarGraph& g) { 
