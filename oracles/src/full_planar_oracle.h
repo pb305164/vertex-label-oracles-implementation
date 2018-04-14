@@ -275,8 +275,8 @@ class DynamicPlanarOracle : public PlanarOracle {
                     if(source [j]) {
                         auto itp=vertices[v].parents.begin()+(it1-vertices[v].portals.begin());
                         vertices[v].portals.insert(it1,make_pair(it2->first,it2->second));
-                        vertices[v].parents.insert(itp, par);
                         auto ite=vertices[v].rparents.begin()+(it2-vertices[v].rportals.begin());
+                        vertices[v].parents.insert(itp, *ite);
                         vertices[v].rportals.erase(it2);
                         vertices[v].rparents.erase(ite);
                     }
@@ -393,6 +393,7 @@ public:
 
     virtual
     W distanceToVertex(int v, int w) {
+        if(v==w) return 0;
         vector<int> spv, spw;
         int i=0, j=0, common_portal=-1, pos_portal_v, pos_portal_w;
         W result=infinity;
@@ -422,7 +423,7 @@ public:
                     result=dist;
                     pos_portal_v=i;
                     pos_portal_w=j;
-                    common_portal=vertices[v].portals[i].first;
+                    common_portal=vertices[v].rportals[i].first;
                     vr=true;
                 }
                 ++i; ++j;
@@ -434,18 +435,18 @@ public:
         }
 
         if(common_portal!=-1) {
-            int x=v;
-            int pos_por = pos_portal_v; bool rpor=vr;
-            while( x != common_portal ) {
+            spv.push_back(v);
+            int x = vr ? vertices[v].rparents[pos_portal_v] : vertices[v].parents[pos_portal_v];
+            int count=0;
+            while( x != -1 ) {
+                assert(++count < vertices.size()+2);
                 spv.push_back(x);
-                x = rpor ? vertices[x].rparents[pos_por] : vertices[x].parents[pos_por];
-                assert(x!=-1);
-                rpor=false;
                 auto it1=lower_bound(vertices[x].portals.begin(),
                                     vertices[x].portals.end(),
                                     make_pair(common_portal,(W)-1));
                 bool por=(it1 != vertices[x].portals.end() && it1->first == common_portal);
                 vector< pair<int,W> >::iterator it2;
+                bool rpor=false;
                 if(! por) {
                     it2=lower_bound(vertices[x].rportals.begin(),
                                          vertices[x].rportals.end(),
@@ -453,21 +454,21 @@ public:
                     rpor = (it2 != vertices[x].rportals.end() && it2->first == common_portal);
                 }
                 assert(por || rpor);
-                pos_por = rpor ? it2-vertices[x].rportals.begin() : it1-vertices[x].portals.begin();
+                x = rpor ? vertices[x].rparents[it2-vertices[x].rportals.begin()]
+                         : vertices[x].parents[it1-vertices[x].portals.begin()];
             }
 
-            x=w;
-            pos_por=pos_portal_w; rpor=false;
-            while( x!= common_portal ) {
+            spw.push_back(w); x = vertices[w].parents[pos_portal_w];
+            count = 0;
+            while( x!= -1 ) {
+                assert(++count < vertices.size()+2);
                 spw.push_back(x);
-                x = rpor ? vertices[x].rparents[pos_por] : vertices[x].parents[pos_por];
-                assert(x!=-1);
-                rpor=false;
                 auto it1=lower_bound(vertices[x].portals.begin(),
                                     vertices[x].portals.end(),
                                     make_pair(common_portal,(W)-1));
                 bool por=(it1 != vertices[x].portals.end() && it1->first == common_portal);
                 vector< pair<int,W> >::iterator it2;
+                bool rpor=false;
                 if(! por) {
                     it2=lower_bound(vertices[x].rportals.begin(),
                                          vertices[x].rportals.end(),
@@ -475,12 +476,13 @@ public:
                     rpor = (it2 != vertices[x].rportals.end() && it2->first == common_portal);
                 }
                 assert(por || rpor);
-                pos_por = rpor ? it2-vertices[x].rportals.begin() : it1-vertices[x].portals.begin();
+                x = rpor ? vertices[x].rparents[it2-vertices[x].rportals.begin()]
+                         : vertices[x].parents[it1-vertices[x].portals.begin()];
             }
 
-            reverse(spw.begin(),spw.end());
-            spv.push_back(common_portal);
-            spv.insert(spv.end(),spw.begin(),spw.end());
+            //reverse(spw.begin(),spw.end());
+            //spv.pop_back();
+            //spv.insert(spv.end(),spw.begin(),spw.end());
         }
         return result;
     }
@@ -657,6 +659,7 @@ public:
 
     virtual
     W distanceToVertex(int v, int w) {
+        if(v==w) return 0;
         vector<int> spv, spw;
         int i=0, j=0, common_portal=-1, pos_portal_v, pos_portal_w;
         W result=infinity;
@@ -679,35 +682,41 @@ public:
         }
 
         if(common_portal!=-1) {
-            int x=v;
-            int pos_por = pos_portal_v;
-            while( x != common_portal ) {
+            spv.push_back(v); int x = vertices[v].parents[pos_portal_v];
+            //int count=0;
+            int pos_por;
+            while( x != -1 ) {
+                //++count;
+                //assert(count < vertices.size());
+                auto it1=lower_bound(vertices[x].portals.begin(),
+                                    vertices[x].portals.end(),
+                                    make_pair(common_portal,(W)-1));
+                assert(it1 != vertices[x].portals.end() && it1->first == common_portal);
+                pos_por = it1-vertices[x].portals.begin();
+
                 spv.push_back(x);
                 x = vertices[x].parents[pos_por];
-                assert(x!=-1);
+            }
+
+            //count=0;
+            spv.push_back(w); x = vertices[w].parents[pos_portal_w];
+            while( x!= -1 ) {
+                //++count;
+                //assert(count < vertices.size());
                 auto it1=lower_bound(vertices[x].portals.begin(),
                                     vertices[x].portals.end(),
                                     make_pair(common_portal,(W)-1));
                 assert(it1 != vertices[x].portals.end() && it1->first == common_portal);
                 pos_por = it1-vertices[x].portals.begin();
-            }
 
-            x=w;
-            pos_por=pos_portal_w;
-            while( x!= common_portal ) {
                 spw.push_back(x);
                 x = vertices[x].parents[pos_por];
-                assert(x!=-1);
-                auto it1=lower_bound(vertices[x].portals.begin(),
-                                    vertices[x].portals.end(),
-                                    make_pair(common_portal,(W)-1));
-                assert(it1 != vertices[x].portals.end() && it1->first == common_portal);
-                pos_por = it1-vertices[x].portals.begin();
             }
 
-            reverse(spw.begin(),spw.end());
-            spv.push_back(common_portal);
-            spv.insert(spv.end(),spw.begin(),spw.end());
+            // tu trzeba wykopac podwojna kopie wspolnego portala
+            //reverse(spw.begin(),spw.end());
+            //spv.pop_back();
+            //spv.insert(spv.end(),spw.begin(),spw.end());
         }
         return result;
     }

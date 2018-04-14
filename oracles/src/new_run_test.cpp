@@ -91,7 +91,7 @@ void parse_program_options(int argc, char* argv[]) {
                 print_help();
                 exit(1);
             }
-            if (sscanf(argv[i], "%d", &v) && v >= 0 && v < 13) {
+            if (sscanf(argv[i], "%d", &v) && v >= 0) {
                 oracle_type = v;
             } else {
                 fprintf(stderr, "Error while parsing -O option, invalid value\n\n");

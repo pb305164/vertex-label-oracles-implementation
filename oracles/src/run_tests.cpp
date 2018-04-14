@@ -300,17 +300,17 @@ int main(int argc, char* argv[]) {
 //    }
 
 
-    long mem_begin = get_mem_size();
-    printf("pamięć przed: %ldK\n", get_mem_size());
+    //long mem_begin = get_mem_size();
+    //printf("pamięć przed: %ldK\n", get_mem_size());
 
     std::chrono::duration<double, std::milli> build_time;
 
     switch (alg_num) {
     case 1:
-        printf("FULL PLANAR, EPS=1\n");
+        printf("SIMPLE PLANAR, EPS=1\n");
         {
             auto t1 = std::chrono::steady_clock::now();
-            StaticPlanarOracle oracle(n, edges, distances, labels, EPS);
+            DynamicSimplePlanarOracle oracle(n, edges, distances, labels, EPS);
             auto t2 = std::chrono::steady_clock::now();
             build_time = t2 - t1;
             printf("Czas budowy: %lfs\n", build_time.count()/1000);
@@ -320,11 +320,11 @@ int main(int argc, char* argv[]) {
         }
         break;
     case 2:
-        printf("FULL PLANAR, EPS=4\n");
+        printf("SIMPLE PLANAR, EPS=4\n");
         {
             EPS=4.;
             auto t1 = std::chrono::steady_clock::now();
-            StaticPlanarOracle oracle(n, edges, distances, labels, EPS);
+            DynamicSimplePlanarOracle oracle(n, edges, distances, labels, EPS);
             auto t2 = std::chrono::steady_clock::now();
             build_time = t2 - t1;
             printf("Czas budowy: %lfs\n", build_time.count()/1000);
@@ -334,11 +334,11 @@ int main(int argc, char* argv[]) {
         }
         break;
     case 3:
-        printf("FULL PLANAR, EPS=8\n");
+        printf("SIMPLE PLANAR, EPS=8\n");
         {
             EPS=8.;
             auto t1 = std::chrono::steady_clock::now();
-            StaticPlanarOracle oracle(n, edges, distances, labels, EPS);
+            DynamicSimplePlanarOracle oracle(n, edges, distances, labels, EPS);
             auto t2 = std::chrono::steady_clock::now();
             build_time = t2 - t1;
             printf("Czas budowy: %lfs\n", build_time.count()/1000);
@@ -348,29 +348,30 @@ int main(int argc, char* argv[]) {
         }
         break;
     case 4:
-        printf("FULL FULL PLANAR, EPS=1\n");
+        printf("PLANAR, EPS=1\n");
         {
             EPS=1.;
             auto t1 = std::chrono::steady_clock::now();
-            StaticLLPlanarOracle oracle(n, edges, distances, labels, EPS);
+            DynamicPlanarOracle oracle(n, edges, distances, labels, EPS);
             auto t2 = std::chrono::steady_clock::now();
             build_time = t2 - t1;
             printf("Czas budowy: %lfs\n", build_time.count()/1000);
-            run_all_tests(oracle,tests);
-            //run_all_ll_tests(oracle, tests);
+            run_all_vv_tests(oracle,tests);
+            run_all_vl_tests(oracle, tests);
             printf("\n\n");
         }
         break;
     case 5:
-        printf("FULL FULL PLANAR, EPS=4\n");
+        printf("PLANAR, EPS=4\n");
         {
             EPS=4.;
             auto t1 = std::chrono::steady_clock::now();
-            StaticLLPlanarOracle oracle(n, edges, distances, labels, EPS);
+            DynamicPlanarOracle oracle(n, edges, distances, labels, EPS);
             auto t2 = std::chrono::steady_clock::now();
             build_time = t2 - t1;
             printf("Czas budowy: %lfs\n", build_time.count()/1000);
-            run_all_tests(oracle, tests);
+            run_all_vv_tests(oracle, tests);
+            run_all_vl_tests(oracle, tests);
             printf("\n\n");
         }
         break;
@@ -461,80 +462,47 @@ int main(int argc, char* argv[]) {
         }
         break;
     case 13:
-        printf("DYNAMIC PLANAR, EPS=1\n");
+        printf("HIERARCHY\n");
         {
-            EPS=1.;
             auto t1 = std::chrono::steady_clock::now();
-            DynamicPlanarOracle oracle(n, edges, distances, labels, EPS);
+            HierarchyOracle oracle(edges, distances, labels, types);
             auto t2 = std::chrono::steady_clock::now();
             build_time = t2 - t1;
-            printf("Czas budowy: %lfs\n", build_time.count()/1000);
-            run_all_vv_tests(oracle, tests);
-            run_all_vl_tests(oracle, tests);
+            printf("Czas budowy: %lfs\n", build_time.count() / 1000);
+            run_all_tests(oracle, tests);
+     //       printf("pamięć po testach: %ldK\n", get_mem_size() - mem_begin);
             printf("\n\n");
         }
         break;
     case 14:
-        printf("DYNAMIC SIMPLE PLANAR, EPS=1\n");
+        printf("HIERARCHY LIGHT\n");
         {
-            EPS=1.;
             auto t1 = std::chrono::steady_clock::now();
-            DynamicSimplePlanarOracle oracle(n, edges, distances, labels, EPS);
+            HierarchyOracleLight oracle(edges, distances, labels, types);
             auto t2 = std::chrono::steady_clock::now();
             build_time = t2 - t1;
-            printf("Czas budowy: %lfs\n", build_time.count()/1000);
+            printf("Czas budowy: %lfs\n", build_time.count() / 1000);
             run_all_vv_tests(oracle, tests);
             run_all_vl_tests(oracle, tests);
+    //        printf("pamięć po testach: %ldK\n", get_mem_size() - mem_begin);
+            printf("\n\n");
+        }
+        break;
+    case 15:
+        printf("HIERARCHY LIGHT Path\n");
+        {
+            auto t1 = std::chrono::steady_clock::now();
+            HierarchyOracleLightPath oracle(edges, distances, labels, types);
+            auto t2 = std::chrono::steady_clock::now();
+            build_time = t2 - t1;
+            printf("Czas budowy: %lfs\n", build_time.count() / 1000);
+            run_all_vv_tests(oracle, tests);
+            run_all_vl_tests(oracle, tests);
+     //       printf("pamięć po testach: %ldK\n", get_mem_size() - mem_begin);
             printf("\n\n");
         }
         break;
     default:
         break;
     }
-
-
-    printf("HIERARCHY\n");
-    {
-        auto t1 = std::chrono::steady_clock::now();
-        HierarchyOracle oracle(edges, distances, labels, types);
-        auto t2 = std::chrono::steady_clock::now();
-        build_time = t2 - t1;
-        printf("Czas budowy: %lfs   pamięć: %ldK\n", build_time.count() / 1000, get_mem_size() - mem_begin);
-        run_all_tests(oracle, tests);
-        printf("pamięć po testach: %ldK\n", get_mem_size() - mem_begin);
-        printf("\n\n");
-    }
-
-    printf("pamięć pomiędzy: %ldK\n", get_mem_size());
-
-    printf("HIERARCHY LIGHT\n");
-    {
-        auto t1 = std::chrono::steady_clock::now();
-        HierarchyOracleLight oracle(edges, distances, labels, types);
-        auto t2 = std::chrono::steady_clock::now();
-        build_time = t2 - t1;
-        printf("Czas budowy: %lfs   pamięć: %ldK\n", build_time.count() / 1000, get_mem_size() - mem_begin);
-        run_all_vv_tests(oracle, tests);
-        run_all_vl_tests(oracle, tests);
-        printf("pamięć po testach: %ldK\n", get_mem_size() - mem_begin);
-        printf("\n\n");
-    }
-
-   printf("pamięć pomiędzy: %ldK\n", get_mem_size());
-
-    printf("HIERARCHY LIGHT Path\n");
-    {
-        auto t1 = std::chrono::steady_clock::now();
-        HierarchyOracleLightPath oracle(edges, distances, labels, types);
-        auto t2 = std::chrono::steady_clock::now();
-        build_time = t2 - t1;
-        printf("Czas budowy: %lfs   pamięć: %ldK\n", build_time.count() / 1000, get_mem_size() - mem_begin);
-        run_all_vv_tests(oracle, tests);
-        run_all_vl_tests(oracle, tests);
-        printf("pamięć po testach: %ldK\n", get_mem_size() - mem_begin);
-        printf("\n\n");
-    }
-
-    printf("pamięć pomiędzy: %ldK\n", get_mem_size());
-
 }

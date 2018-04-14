@@ -1,7 +1,7 @@
 ALL = oracle_main run_tests new_run_test gen_test new_gen_test
 CXX = g++
-#CXXFLAGS = -std=c++14 -O3 -Wall -g -I/home/anka/usr/include -I./src -I./src/osrm/src -I./src/osrm/include -I./src/osrm/third_party/variant/include
-CXXFLAGS = -std=c++14 -Wall -g -I/home/anka/usr/include -I./src -I./src/osrm/src -I./src/osrm/include -I./src/osrm/third_party/variant/include
+CXXFLAGS = -std=c++14 -O3 -Wall -g -I/home/anka/usr/include -I./src -I./src/osrm/src -I./src/osrm/include -I./src/osrm/third_party/variant/include
+#CXXFLAGS = -std=c++14 -Wall -g -I/home/anka/usr/include -I./src -I./src/osrm/src -I./src/osrm/include -I./src/osrm/third_party/variant/include
 LIBS = -L/home/anka/usr/lib -L/home/anka/downloads/tbb-2018_U2/build/linux_intel64_gcc_cc6.4.0_libc2.17_kernel2.6.32_release -lboost_system -lboost_filesystem -lboost_iostreams -lboost_program_options -lboost_regex -lboost_date_time -lboost_thread -ltbb -lrt -pthread
 
 
