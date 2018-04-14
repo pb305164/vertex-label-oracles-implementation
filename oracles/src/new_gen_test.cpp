@@ -82,13 +82,14 @@ vector<pair<W, pair<int, int>>> get_queries_to_vertices(int new_lbl, unordered_m
             queries.push_back(make_pair(dist[i], make_pair(i, new_lbl)));
         }
     }
+    // Sort by distance
+    auto cmp = [](pair<W, pair<int, int> > &a, pair<W, pair<int, int> > &b) { return a.first < b.first; };
+    sort(queries.begin(), queries.end(), cmp);
     return queries;
 }
 
 vector<pair<W, pair<int, int>>> get_queries_to_labels(int new_lbl, unordered_map<int, set<int>> &lbl_to_ver) {
     vector<W> dist(n, infinity);
-    vector<W> lbl_dist(new_lbl+1, infinity);
-
     PQ queue;
     for (auto v: lbl_to_ver[new_lbl]) {
         dist[v] = 0;
@@ -97,14 +98,18 @@ vector<pair<W, pair<int, int>>> get_queries_to_labels(int new_lbl, unordered_map
     dijkstra(queue, dist);
 
     vector<pair<W, pair<int, int>>> queries;
-    for (int i=0; i<n; i++) {
-        if (dist[i] != 0 && dist[i] != infinity && lbl_dist[labels[i]] > dist[i]) {
-            lbl_dist[labels[i]] = dist[i];
+    unordered_map<int, W> lbl_dist;
+    for (int j=0; j<n; j++) {
+        if (dist[j] != 0 && dist[j] != infinity && labels[j] != 0 && (lbl_dist.count(labels[j]) == 0 || dist[j] < lbl_dist[labels[j]])) {
+            lbl_dist[labels[j]] = dist[j];
         }
     }
-    for (int i=0; i<new_lbl; i++) {
-        if (lbl_dist[i] != 0 && lbl_dist[i] != infinity) queries.push_back(make_pair(lbl_dist[i], make_pair(i, new_lbl)));
+    for (auto &p: lbl_dist) {
+        queries.push_back(make_pair(p.second, make_pair(new_lbl, p.first)));
     }
+    // Sort by distance
+    auto cmp = [](pair<W, pair<int, int> > &a, pair<W, pair<int, int> > &b) { return a.first < b.first; };
+    sort(queries.begin(), queries.end(), cmp);
     return queries;
 }
 
@@ -149,7 +154,11 @@ void calc_all_vertex_label(vector<pair<W, pair<int, int>>> &all_dist) {
         }
         dijkstra(queue, dist);
 
-        for (int j=0; j<n; j++) if (dist[j] != 0 && dist[j] != infinity) all_dist.push_back(make_pair(dist[j], make_pair(j, i)));
+        for (int j=0; j<n; j++) {
+            if (dist[j] != 0 && dist[j] != infinity) {
+                all_dist.push_back(make_pair(dist[j], make_pair(j, i)));
+            }
+        }
     }
 
     // Sort by distance
@@ -173,7 +182,11 @@ void calc_all_label_label_dist(vector<pair<W, pair<int, int>>> &all_dist) {
             }
         }
         dijkstra(queue, dist);
-        for (int j=0; j<n; j++) if (dist[j] != 0 && dist[j] != infinity && labels[j] != 0 && (lbl_dist.count(labels[j]) == 0 || dist[j] < lbl_dist[labels[j]])) lbl_dist[labels[j]] = dist[j];
+        for (int j=0; j<n; j++) {
+            if (dist[j] != 0 && dist[j] != infinity && labels[j] != 0 && (lbl_dist.count(labels[j]) == 0 || dist[j] < lbl_dist[labels[j]])) {
+                lbl_dist[labels[j]] = dist[j];
+            }
+        }
         for (auto &p: lbl_dist) {
             all_dist.push_back(make_pair(p.second, make_pair(i, p.first)));
         }
@@ -488,47 +501,12 @@ void generate_query_test() {
     for (int s=0; s<sample_count; s++) {
         int i=s;
 
-        // Not by buckets
-//        // Setup query randomizers for different query types.
-//        // Option start and option end define percentile range, samples start from shortest queries, end longest
-//        float start_percentile = option_start + ((float)i/(float)sample_count)*(option_end-option_start);
-//        float end_percentile = option_start + ((float)(i+1)/(float)sample_count)*(option_end-option_start);
-//        auto vv_rng = uniform_int_distribution<int>(vv_queries.size()*start_percentile , vv_queries.size()*end_percentile - 1);
-//        auto vl_rng = uniform_int_distribution<int>(vl_queries.size()*start_percentile , vl_queries.size()*end_percentile - 1);
-//        auto ll_rng = uniform_int_distribution<int>(ll_queries.size()*start_percentile , ll_queries.size()*end_percentile - 1);
-
-        // By buckets
         int vv_index = 0;
         int vl_index = 0;
         int ll_index = 0;
 
-        // TODO hmm
-//        int hmm=0;
-//        while (vv_buckets[i].size() + vl_buckets[i].size() + ll_buckets[i].size() == 0) {
-//            if (s+hmm >= 0 && s+hmm<sample_count) i = s+hmm;
-//            if (hmm>0) hmm = -hmm;
-//            else hmm = -hmm + 1;
-//        }
-        assert(i>=0 && i<sample_count && vv_buckets[i].size() + vl_buckets[i].size() + ll_buckets[i].size() > 0);
         auto vec_rng = uniform_int_distribution<int>(0, vv_buckets[i].size() + vl_buckets[i].size() + ll_buckets[i].size() - 1);
 
-        // Not by buckets
-//        for (int j=0; j<sample_size; j++) {
-//            // Select vector to random query from
-//            int r = vec_rng(rd);
-//            if (r < (int)vv_queries.size()) {
-//                int q = vv_rng(rd);
-//                printf("0 %d %d %f\n", vv_queries[q].second.first, vv_queries[q].second.second, vv_queries[q].first);
-//            } else if (r < (int)vv_queries.size() + (int)vl_queries.size()){
-//                int q = vl_rng(rd);
-//                printf("1 %d %d %f\n", vl_queries[q].second.second, vl_queries[q].second.first, vl_queries[q].first);
-//            } else {
-//                int q = ll_rng(rd);
-//                printf("2 %d %d %f\n", ll_queries[q].second.first, ll_queries[q].second.second, ll_queries[q].first);
-//            }
-//        }
-
-        // By buckets
         for (int j=0; j<sample_size; j++) {
             // Select vector to random query from
             int r = vec_rng(rd);
@@ -642,10 +620,6 @@ void generate_new_label_test() {
     auto query_type_rng = uniform_int_distribution<int>(1, 2);
 
     int query_index_v[10], query_index_l[10];
-    for (int i=0; i<10; i++) {
-        query_index_v[i] = 0;
-        query_index_l[i] = 0;
-    }
 
     int ver_count = 0;
 
@@ -678,6 +652,11 @@ void generate_new_label_test() {
             split_by_distance(get_queries_to_labels(new_lbl, lbl_to_ver), buckets_l);
         }
 
+        for (int i=0; i<10; i++) {
+            query_index_v[i] = 0;
+            query_index_l[i] = 0;
+        }
+
         while (j<sample_size) {
             int b = bucket_rng(rd);
             int qt = query_type_rng(rd);
@@ -693,7 +672,6 @@ void generate_new_label_test() {
             } else {
                 auto q = buckets_l[b][query_index_l[b]];
                 if (++query_index_l[b] >= (int)buckets_l[b].size()) query_index_l[b] = 0;
-
                 // Query type (2: label-label), start label, end label, answer
                 printf("2 %d %d %f\n", q.second.first, q.second.second, q.first);
             }

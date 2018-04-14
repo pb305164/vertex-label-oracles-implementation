@@ -454,7 +454,7 @@ FILE *prep_test(size_t test_id) {
 }
 
 template <class T>
-void prep_oracle(T oracle) {
+void prep_oracle(T &oracle) {
     // If test type == 3 clear labels
     if (test_type == 3) {
         for (int i = 0; i < n; i++) {
