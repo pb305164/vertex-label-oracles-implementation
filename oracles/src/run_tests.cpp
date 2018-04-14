@@ -505,4 +505,162 @@ int main(int argc, char* argv[]) {
     default:
         break;
     }
+
+    printf("pamięć pomiędzy: %ldK\n", get_mem_size());
+
+    printf("HIERARCHY LIGHT\n");
+    {
+        auto t1 = std::chrono::steady_clock::now();
+        HierarchyOracleLight oracle(edges, distances, labels, types);
+        auto t2 = std::chrono::steady_clock::now();
+        build_time = t2 - t1;
+        printf("Czas budowy: %lfs   pamięć: %ldK\n", build_time.count() / 1000, get_mem_size() - mem_begin);
+        run_all_vv_tests(oracle, tests);
+        run_all_vl_tests(oracle, tests);
+        printf("pamięć po testach: %ldK\n", get_mem_size() - mem_begin);
+        printf("\n\n");
+    }
+
+   printf("pamięć pomiędzy: %ldK\n", get_mem_size());
+
+    printf("HIERARCHY LIGHT Path\n");
+    {
+        auto t1 = std::chrono::steady_clock::now();
+        HierarchyOracleLightPath oracle(edges, distances, labels, types);
+        auto t2 = std::chrono::steady_clock::now();
+        build_time = t2 - t1;
+        printf("Czas budowy: %lfs   pamięć: %ldK\n", build_time.count() / 1000, get_mem_size() - mem_begin);
+        run_all_vv_tests(oracle, tests);
+        run_all_vl_tests(oracle, tests);
+        printf("pamięć po testach: %ldK\n", get_mem_size() - mem_begin);
+        printf("\n\n");
+    }
+
+    printf("pamięć pomiędzy: %ldK\n", get_mem_size());
+
+    printf("FULL PLANAR\n");
+    {
+        auto t1 = std::chrono::steady_clock::now();
+        FullPlanarOracle oracle(n, edges, distances, labels, EPS);
+        auto t2 = std::chrono::steady_clock::now();
+        build_time = t2 - t1;
+        printf("Czas budowy: %lfs   pamięć: %ldK\n", build_time.count() / 1000, get_mem_size() - mem_begin);
+        run_all_vl_tests(oracle, tests);
+        printf("\n\n");
+    }
+
+    printf("pamięć pomiędzy: %ldK\n", get_mem_size());
+
+    printf("FULL FULL PLANAR\n");
+    {
+        auto t1 = std::chrono::steady_clock::now();
+        FullFullPlanarOracle oracle(n, edges, distances, labels, EPS);
+        auto t2 = std::chrono::steady_clock::now();
+        build_time = t2 - t1;
+        printf("Czas budowy: %lfs   pamięć: %ldK\n", build_time.count() / 1000, get_mem_size() - mem_begin);
+        run_all_ll_tests(oracle, tests);
+        printf("\n\n");
+    }
+
+    printf("pamięć pomiędzy: %ldK\n", get_mem_size());
+
+    printf("OSRM Oracle\n");
+    {
+        auto t1 = std::chrono::steady_clock::now();
+        OsrmOracle oracle(argv[1], max_label, coords, labels);
+        auto t2 = std::chrono::steady_clock::now();
+        build_time = t2 - t1;
+        printf("Czas budowy: %lfs   pamięć: %ldK\n", build_time.count() / 1000, get_mem_size() - mem_begin);
+        run_all_tests(oracle, tests);
+        printf("pamięć po testach: %ldK\n", get_mem_size() - mem_begin);
+        printf("\n\n");
+    }
+
+    printf("pamięć pomiędzy: %ldK\n", get_mem_size());
+
+    printf("5 APPROX QUERY\n");
+    {
+        auto t1 = std::chrono::steady_clock::now();
+        OracleGeneral5ApproxQuery oracle(n, edges, distances, labels);
+        auto t2 = std::chrono::steady_clock::now();
+        build_time = t2 - t1;
+        printf("Czas budowy: %lfs   pamięć: %ldK\n", build_time.count() / 1000, get_mem_size() - mem_begin);
+        run_all_vl_tests(oracle, tests);
+        printf("pamięć po testach: %ldK\n", get_mem_size() - mem_begin);
+        printf("\n\n");
+    }
+
+    printf("pamięć pomiędzy: %ldK\n", get_mem_size());
+
+    printf("5 APPROX UPDATE\n");
+    {
+        auto t1 = std::chrono::steady_clock::now();
+        OracleGeneral5ApproxUpdate oracle(n, edges, distances, labels);
+        auto t2 = std::chrono::steady_clock::now();
+        build_time = t2 - t1;
+        printf("Czas budowy: %lfs   pamięć: %ldK\n", build_time.count() / 1000, get_mem_size() - mem_begin);
+        run_all_vl_tests(oracle, tests);
+        printf("pamięć po testach: %ldK\n", get_mem_size() - mem_begin);
+        printf("\n\n");
+    }
+
+    printf("pamięć pomiędzy: %ldK\n", get_mem_size());
+
+    printf("3 APPROX LIGHT\n");
+    {
+        auto t1 = std::chrono::steady_clock::now();
+        OracleGeneral3ApproxLight oracle(n, edges, distances, labels);
+        auto t2 = std::chrono::steady_clock::now();
+        build_time = t2 - t1;
+        printf("Czas budowy: %lfs   pamięć: %ldK\n", build_time.count() / 1000, get_mem_size() - mem_begin);
+        run_all_vl_tests(oracle, tests);
+        run_all_ll_tests(oracle, tests);
+         printf("pamięć po testach: %ldK\n", get_mem_size() - mem_begin);
+        printf("\n\n");
+    }
+
+    printf("pamięć pomiędzy: %ldK\n", get_mem_size());
+
+    printf("3 APPROX\n");
+    {
+        auto t1 = std::chrono::steady_clock::now();
+        OracleGeneral3Approx oracle(n, edges, distances, labels);
+        auto t2 = std::chrono::steady_clock::now();
+        build_time = t2 - t1;
+        printf("Czas budowy: %lfs   pamięć: %ldK\n", build_time.count() / 1000, get_mem_size() - mem_begin);
+        run_all_vl_tests(oracle, tests);
+        run_all_ll_tests(oracle, tests);
+        printf("pamięć po testach: %ldK\n", get_mem_size() - mem_begin);
+        printf("\n\n");
+    }
+
+    printf("pamięć pomiędzy: %ldK\n", get_mem_size());
+
+    printf("ASTAR\n");
+    {
+        auto t1 = std::chrono::steady_clock::now();
+        AstarOracle oracle(n, m, max_label, max_speed, edges, distances, labels, coords);
+        auto t2 = std::chrono::steady_clock::now();
+        build_time = t2 - t1;
+        printf("Czas budowy: %lfs   pamięć: %ldK\n", build_time.count() / 1000, get_mem_size() - mem_begin);
+        run_all_tests(oracle, tests);
+        printf("pamięć po testach: %ldK\n", get_mem_size() - mem_begin);
+        printf("\n\n");
+    }
+
+    printf("pamięć pomiędzy: %ldK\n", get_mem_size());
+
+    printf("DIJKSTRA\n");
+    {
+        auto t1 = std::chrono::steady_clock::now();
+        DijkstraOracle oracle(n, m, max_label, edges, distances, labels);
+        auto t2 = std::chrono::steady_clock::now();
+        build_time = t2 - t1;
+        printf("Czas budowy: %lfs   pamięć: %ldK\n", build_time.count() / 1000, get_mem_size() - mem_begin);
+        run_all_tests(oracle, tests);
+        printf("pamięć po testach: %ldK\n", get_mem_size() - mem_begin);
+        printf("\n\n");
+    }
+    printf("pamięć: %ldK\n", get_mem_size());
+
 }

@@ -58,10 +58,16 @@ float OsrmOracle::distanceToVertex(int s, int t) {
     json::Object result;
     const auto status = osrm.Route(params, result);
     if (status == Status::Ok) {
+        float time = std::numeric_limits<float>::max();
         auto &routes = result.values["routes"].get<json::Array>();
-        auto &route = routes.values.at(0).get<json::Object>();
+        for (auto &json_obj: routes.values) {
+            auto route = json_obj.get<json::Object>();
+            if (time > (float)route.values["duration"].get<json::Number>().value) {
+                time = (float)route.values["duration"].get<json::Number>().value;
+            }
+        }
         // TODO sprawdzić czy czas jest dobrze liczony ?
-        return (float)route.values["duration"].get<json::Number>().value/3.6;
+        return time;
     } else {
         return -1;
     }
@@ -94,7 +100,7 @@ pair<float, int> OsrmOracle::distanceToLabel(int s, int l) {
         }
         // TODO sprawdzić czy czas jest dobrze liczony ?
         if (min_i != -1) {
-            return make_pair((float) (min_d / 3.6), min_i);
+            return make_pair(min_d, min_i);
         }
     }
     return make_pair(-1, -1);
@@ -134,7 +140,7 @@ pair<float, pair<int, int> > OsrmOracle::distanceBetweenLabels(int l1, int l2) {
         }
         // TODO sprawdzić czy czas jest dobrze liczony ?
         if (min_s != -1) {
-            return make_pair((float) (min_d / 3.6), make_pair(min_s, min_t));
+            return make_pair(min_d, make_pair(min_s, min_t));
         }
     }
     return make_pair(-1, make_pair(-1, -1));}

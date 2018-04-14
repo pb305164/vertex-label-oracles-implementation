@@ -245,7 +245,7 @@ void filter_max_component(unordered_mapB<int, Node> &nodes, unordered_mapB<int, 
     }
 
     // Find biggest consistent component of the graph
-    FindUnion f(max_node_id);
+    FindUnion f(max_node_id+1);
     for (pair<int, set<Edge>> p : edges) {
         for (Edge e : p.second) {
             f.unionn(e.source, e.dest);

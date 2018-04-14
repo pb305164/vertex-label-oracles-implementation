@@ -61,8 +61,8 @@ private:
     }
 
 public:
-    AstarOracle(int nn, int m, int max_label, W mmax_speed, vector<pair<int, int>>& eedges, vector<W>& weights, vector<int>& llabels, vector<pair<W, W>>& cords):
-            n(nn), edges(nn), lbl_to_ver(max_label), coordinates(cords), labels(llabels), max_speed(mmax_speed) //, geodesic(EARTH_RADIUS, 1/INVERSE_FLATTENING)
+    AstarOracle(int nn, int m, W mmax_speed, vector<pair<int, int>>& eedges, vector<W>& weights, vector<int>& llabels, vector<pair<W, W>>& cords):
+            n(nn), edges(nn), lbl_to_ver(), coordinates(cords), labels(llabels), max_speed(mmax_speed) //, geodesic(EARTH_RADIUS, 1/INVERSE_FLATTENING)
 
     {
         for (int i = 0; i < (int) labels.size(); i++) {

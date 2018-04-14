@@ -22,8 +22,8 @@ private:
     vector<int> labels;
 
 public:
-    DijkstraOracle(int nn, int m, int max_label, vector<pair<int, int>> &eedges, vector<W> &weights, vector<int> &llabels):
-            n(nn), edges(nn), lbl_to_ver(max_label), labels(llabels) {
+    DijkstraOracle(int nn, int m, vector<pair<int, int>> &eedges, vector<W> &weights, vector<int> &llabels):
+            n(nn), edges(nn), lbl_to_ver(), labels(llabels) {
         for (int i = 0; i < (int) labels.size(); i++) {
             if (labels[i] != 0) {
                 lbl_to_ver[labels[i]].insert(i);

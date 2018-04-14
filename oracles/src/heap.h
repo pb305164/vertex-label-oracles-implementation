@@ -17,7 +17,7 @@ private:
         MapNode(): key(-1), val(-1), left(-1), right(-1) {};
     };
 
-    size_t _size, max_size;
+    size_t _size;
     vector<MapNode> nodes;
 
     static int const log32(int n) {
@@ -82,6 +82,7 @@ private:
 
     // Return position in nodes vector (create if not found)
     void find(int pos, Key k, vector<Key> &path) {
+        assert(pos != -1);
         path.push_back(pos);
         while (pos != -1) {
             MapNode &n = nodes[pos];
@@ -106,7 +107,7 @@ private:
     }
 
 public:
-    ScapegoatMap(): _size(0) {}
+    ScapegoatMap(): _size(0), nodes() {}
 
     void inorder(vector<pair<Key, Val>> &ret, int pos) {
         if (pos != -1) {
@@ -197,10 +198,6 @@ public:
 
     }
 
-    size_t size_nodes() {
-        return max_size;
-    }
-
     void clear() {
         _size = 0;
         nodes.clear();
@@ -227,15 +224,14 @@ public:
                 return nodes[path.back()].val;
             } else {
                 // Add new key
-                path.back() = (int)nodes.size();
+                int new_ptr = (int)nodes.size();
                 nodes.push_back(MapNode(k, Val()));
-                if (max_size < nodes.size()) max_size = nodes.size();
                 _size++;
                 MapNode &parent = nodes[*(path.rbegin()+1)];
                 if (parent.key < k) {
-                    parent.right = path.back();
+                    parent.right = new_ptr;
                 } else {
-                    parent.left = path.back();
+                    parent.left = new_ptr;
                 }
 
                 // Check if tree is unbalanced
@@ -259,11 +255,8 @@ public:
                         }
                     } while (3*child_size <= 2*parent_size);
                     rebalance(parent);
-                    path.clear();
-                    find(0, k, path);
                 }
-                assert(path.back() != -1);
-                return nodes[path.back()].val;
+                return nodes[new_ptr].val;
             }
         } else {
             _size++;
@@ -282,6 +275,7 @@ private:
 
     // Swaps position p1 and p2 in heap and update positions accordingly
     void hswap(T &ver_to_pos, int p1, int p2) {
+        assert(p1 < (int)heap.size() && p2 < (int)heap.size());
         swap(ver_to_pos[heap[p1].second], ver_to_pos[heap[p2].second]);
         swap(heap[p1], heap[p2]);
     }
@@ -324,6 +318,7 @@ public:
     // Remove vertex v from heap
     void erase(T &ver_to_pos, int v) {
         int vpos = ver_to_pos[v];
+        assert(vpos > 0 && vpos < (int)heap.size());
         hswap(ver_to_pos, vpos, (int)heap.size()-1);
         ver_to_pos.erase(v);
         heap.pop_back();
