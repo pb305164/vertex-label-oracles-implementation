@@ -160,9 +160,9 @@ void calc_all_vertex_label(vector<pair<W, pair<int, int>>> &all_dist) {
 
 void calc_all_label_label_dist(vector<pair<W, pair<int, int>>> &all_dist) {
     vector<W> dist(n);
-    unordered_map<int, W> lbl_dist;
 
     for (int i=1; i<max_label; i++) {
+        unordered_map<int, W> lbl_dist;
         PQ queue;
 
         for (int j=0; j<n; j++) {
@@ -173,7 +173,7 @@ void calc_all_label_label_dist(vector<pair<W, pair<int, int>>> &all_dist) {
             }
         }
         dijkstra(queue, dist);
-        for (int j=0; j<n; j++) if (labels[j] != 0 && (lbl_dist.count(labels[j]) == 0 || dist[j] < lbl_dist[labels[j]])) lbl_dist[labels[j]] = dist[j];
+        for (int j=0; j<n; j++) if (dist[j] != 0 && dist[j] != infinity && labels[j] != 0 && (lbl_dist.count(labels[j]) == 0 || dist[j] < lbl_dist[labels[j]])) lbl_dist[labels[j]] = dist[j];
         for (auto &p: lbl_dist) {
             all_dist.push_back(make_pair(p.second, make_pair(i, p.first)));
         }
@@ -774,13 +774,11 @@ void generate_build_labels_test(vector<pair<int, int>> &set_labels) {
                 if (++query_index_vv[b] >= (int)vv_buckets[b].size()) query_index_vv[b] = 0;
             } else if (qt == 1){
                 auto q = vl_buckets[b][query_index_vl[b]];
-                assert(abs(get_distance_to_label(q.second.second, q.second.first) - q.first) < 0.1);
                 // Query type (1: vertex-label), start vertex, end label, answer
                 printf("1 %d %d %f\n", q.second.first, q.second.second, q.first);
                 if (++query_index_vl[b] >= (int)vl_buckets[b].size()) query_index_vl[b] = 0;
             } else {
                 auto q = ll_buckets[b][query_index_ll[b]];
-                assert(abs(get_distance_between_labels(q.second.second, q.second.first, lbl_to_ver) - q.first) < 0.1);
                 // Query type (2: label-label), start label, end label, answer
                 printf("2 %d %d %f\n", q.second.first, q.second.second, q.first);
                 if (++query_index_ll[b] >= (int)ll_buckets[b].size()) query_index_ll[b] = 0;
