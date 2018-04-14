@@ -123,9 +123,10 @@ void merge_nodes(unordered_mapB<int, Node> &nodes, unordered_mapB<int, set<Edge>
     }
 }
 
-bool merge_edges = false, add_labels = true, planarize = true;
+bool merge_edges = false, add_labels = true, planarize = true, create_osm = true;
 mpreal min_travel_time = 0;
 char *osm_path = nullptr;
+
 
 void print_help() {
     fprintf(stderr,
@@ -136,9 +137,10 @@ void print_help() {
             "                   This method desn't remove nodes with assigned labels,\n"
             "                   and doesn't create self loops. Be default edges are not merged.\n\n"
             "  -mn min_dist   : Merge nodes that are closer to each other then distance. By default nodes are not merged.\n"
-            "                   To keep compatibility with previous verison min_dist can be also given as last argument"
+            "                   To keep compatibility with previous verison min_dist can be also given as last argument\n\n"
             "  -P             : DON'T planarazie graph. By default graph is planarized\n\n"
             "  -L             : DON'T add labeled nodes to graph. By default labeled nodes are added to graph\n\n"
+            "  -OSM           : DON'T create osm file from constructed graph\n\n"
     );
 
 }
@@ -164,6 +166,8 @@ void parse_program_options(int argc, char* argv[]) {
             planarize = false;
         } else if (strcmp("-L", argv[i]) == 0) {
             add_labels = false;
+        } else if (strcmp("-OSM", argv[i]) == 0) {
+            create_osm = false;
         } else {
             if (osm_path == nullptr) {
                 osm_path = argv[i];
@@ -191,6 +195,43 @@ void parse_program_options(int argc, char* argv[]) {
         print_help();
         exit(1);
     }
+}
+
+void print_osm(unordered_mapB<int, Node> &nodes, unordered_mapB<int, set<Edge>> &edges) {
+    string new_path(osm_path);
+    new_path.insert(new_path.find_last_of("/")+1, "Graph_");
+    FILE *osm_file = fopen(new_path.c_str(), "w");
+    if (osm_file == nullptr) {
+        fprintf(stderr, "ERROR while writing new osm file\n");
+        exit(1);
+    }
+    fprintf(osm_file, "<?xml version='1.0' encoding='UTF-8'?>\n<osm version=\"0.6\">\n");
+    for (auto &node: nodes) {
+        if (node.second.label == -1) {
+            fprintf(osm_file, "<node id=\"%d\" lat=\"%s\" lon=\"%s\"/>\n", node.first, str(node.second.lat).c_str(), str(node.second.lon).c_str());
+        } else {
+            fprintf(osm_file, "<node id=\"%d\" lat=\"%s\" lon=\"%s\">\n"
+                           "    <tag k=\"shop\" v=\"%d\"/>\n"
+                           "</node>\n", node.first, str(node.second.lat).c_str(), str(node.second.lon).c_str(), node.second.label);
+        }
+
+    }
+    for (auto &es: edges) {
+        for (const Edge &e: es.second) {
+            if (e.source < e.dest) {
+                fprintf(osm_file,
+                        "<way>\n"
+                        "    <nd ref=\"%d\"/>\n"
+                        "    <nd ref=\"%d\"/>\n"
+                        "    <tag k=\"highway\" v=\"motorway\"/>\n"
+                        "    <tag k=\"maxspeed\" v=\"%s\"/>\n"
+                        "</way>\n", e.source, e.dest, str(e.max_speed*3.6).c_str() // Convert max speed from m/s to km/h
+                );
+            }
+        }
+    }
+    fprintf(osm_file, "</osm>\n");
+    fclose(osm_file);
 }
 
 
@@ -226,7 +267,12 @@ int main(int argc, char* argv[]) {
     }
 //    check_graph(nodes, edges);
 
-    // Print graph
+    // Create new osm file with nodes and edges from the graph
+    if (create_osm) {
+        print_osm(nodes, edges);
+    }
+
+    // Print graph to stdout
     int edge_count = 0;
     for (auto es : edges) {
         edge_count += es.second.size();

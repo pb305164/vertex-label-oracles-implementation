@@ -67,34 +67,43 @@ void dijkstra(PQ &queue, vector<W> &dist)
     }
 }
 
-vector<pair<W, pair<int, int>>> get_queries_to_vertices(int v) {
+vector<pair<W, pair<int, int>>> get_queries_to_vertices(int new_lbl, unordered_map<int, set<int>> &lbl_to_ver) {
     vector<W> dist(n, infinity);
-    for (int j=0; j<n; j++) dist[j] = infinity;
-    dist[v] = 0;
     PQ queue;
-    queue.push(make_pair(0, v));
+    for (auto v: lbl_to_ver[new_lbl]) {
+        dist[v] = 0;
+        queue.push(make_pair(0, v));
+    }
     dijkstra(queue, dist);
 
     vector<pair<W, pair<int, int>>> queries;
     for (int i=0; i<n; i++) {
-        queries.push_back(make_pair(dist[i], make_pair(v, i)));
+        if (dist[i] != 0 && dist[i] != infinity) {
+            queries.push_back(make_pair(dist[i], make_pair(i, new_lbl)));
+        }
     }
     return queries;
 }
 
-vector<pair<W, pair<int, int>>> get_queries_to_labels(int v, unordered_map<int, set<int>> lbl_to_ver) {
-    vector<W> dist(n, infinity), lbl_dist(max_label, infinity);
+vector<pair<W, pair<int, int>>> get_queries_to_labels(int new_lbl, unordered_map<int, set<int>> &lbl_to_ver) {
+    vector<W> dist(n, infinity);
+    vector<W> lbl_dist(new_lbl+1, infinity);
+
     PQ queue;
-    dist[v] = 0;
-    queue.push(make_pair(0, v));
-    dijkstra(queue, dist);
-    for(int i=0; i<n; i++) {
-        if (dist[i] < lbl_dist[labels[i]]) lbl_dist[labels[i]] = dist[i];
+    for (auto v: lbl_to_ver[new_lbl]) {
+        dist[v] = 0;
+        queue.push(make_pair(0, v));
     }
+    dijkstra(queue, dist);
 
     vector<pair<W, pair<int, int>>> queries;
-    for (int i=0; i<max_label; i++) {
-        queries.push_back(make_pair(lbl_dist[i], make_pair(v, i)));
+    for (int i=0; i<n; i++) {
+        if (dist[i] != 0 && dist[i] != infinity && lbl_dist[labels[i]] > dist[i]) {
+            lbl_dist[labels[i]] = dist[i];
+        }
+    }
+    for (int i=0; i<new_lbl; i++) {
+        if (lbl_dist[i] != 0 && lbl_dist[i] != infinity) queries.push_back(make_pair(lbl_dist[i], make_pair(i, new_lbl)));
     }
     return queries;
 }
@@ -140,7 +149,7 @@ void calc_all_vertex_label(vector<pair<W, pair<int, int>>> &all_dist) {
         }
         dijkstra(queue, dist);
 
-        for (int j=0; j<n; j++) if (dist[j] != 0) all_dist.push_back(make_pair(dist[j], make_pair(i, j)));
+        for (int j=0; j<n; j++) if (dist[j] != 0 && dist[j] != infinity) all_dist.push_back(make_pair(dist[j], make_pair(j, i)));
     }
 
     // Sort by distance
@@ -151,7 +160,7 @@ void calc_all_vertex_label(vector<pair<W, pair<int, int>>> &all_dist) {
 
 void calc_all_label_label_dist(vector<pair<W, pair<int, int>>> &all_dist) {
     vector<W> dist(n);
-    W lbl_dist[max_label];
+    unordered_map<int, W> lbl_dist;
 
     for (int i=1; i<max_label; i++) {
         PQ queue;
@@ -164,9 +173,10 @@ void calc_all_label_label_dist(vector<pair<W, pair<int, int>>> &all_dist) {
             }
         }
         dijkstra(queue, dist);
-        for (int j=0; j<max_label; j++) lbl_dist[j] = infinity;
-        for (int j=0; j<n; j++) if (dist[j] < lbl_dist[labels[j]]) lbl_dist[labels[j]] = dist[j];
-        for (int j=0; j<max_label; j++) if (lbl_dist[j] != 0) all_dist.push_back(make_pair(lbl_dist[j], make_pair(i, j)));
+        for (int j=0; j<n; j++) if (labels[j] != 0 && (lbl_dist.count(labels[j]) == 0 || dist[j] < lbl_dist[labels[j]])) lbl_dist[labels[j]] = dist[j];
+        for (auto &p: lbl_dist) {
+            all_dist.push_back(make_pair(p.second, make_pair(i, p.first)));
+        }
     }
 
     // Sort by distance
@@ -177,12 +187,48 @@ void calc_all_label_label_dist(vector<pair<W, pair<int, int>>> &all_dist) {
 
 // Split queries in dist, into bucket_count buckets based on distance
 void split_by_distance(vector<pair<W, pair<int, int>>> queries, vector<vector<pair<W, pair<int, int>>>> &buckets, float start_percentile = 0, float end_percentile = 1) {
+    assert(queries.size()>100);
     W min_dist = (queries.back().first-queries.front().first)*start_percentile + queries.front().first;
     W max_dist = queries.back().first*end_percentile + (W)0.1;
     for (auto &q: queries) {
         if (q.first > min_dist && q.first < max_dist) {
             buckets[floor(((q.first - min_dist) * buckets.size()) / (max_dist-min_dist))].push_back(q);
         }
+    }
+
+    // TODO hmmm
+    // If bucket is empty -> copy half or queries from next / prev not empty bucket
+    for (size_t i=0; i<buckets.size(); i++) {
+        if (buckets[i].size() == 0) {
+            int neigh_b = (int)i;
+
+            // From next
+            while (neigh_b < (int)buckets.size() && buckets[neigh_b].size() == 0) {
+                neigh_b++;
+            }
+            if (neigh_b < (int)buckets.size()) {
+                for (int j = (int)buckets[neigh_b].size() - 1; j >= (int)buckets[neigh_b].size() / 2; j--) {
+                    buckets[i].push_back(buckets[neigh_b][j]);
+                }
+            }
+
+
+            // From prev
+            neigh_b = i;
+            while (neigh_b >= 0 && buckets[neigh_b].size() == 0) {
+                neigh_b--;
+            }
+            if (neigh_b >= 0) {
+                for (int j = (int)buckets[neigh_b].size() - 1; j >= (int)buckets[neigh_b].size() / 2; j--) {
+                    buckets[i].push_back(buckets[neigh_b][j]);
+                }
+            }
+
+            assert(buckets[i].size() > 0);
+        }
+    }
+    for (auto &bck: buckets) {
+        random_shuffle(bck.begin(), bck.end());
     }
 }
 
@@ -237,20 +283,16 @@ float get_distance_between_labels(int l1, int l2, unordered_map<int, set<int>> &
     return infinity;
 }
 
-pair<int, int> get_border_vertices() {
-    int lv = -1, rv = -1;
-    W lx = 10000, rx = 10000;
+int get_border_vertex() {
+    int lv = -1;
+    W lx = 10000;
     for (int i=0; i<n; i++) {
         if (coords[i].first < lx && labels[i] == 0) {
             lx = coords[i].first;
             lv = i;
         }
-        if (coords[i].first > rx && labels[i] == 0) {
-            rx = coords[i].first;
-            rv = i;
-        }
     }
-    return make_pair(lv, rv);
+    return lv;
 }
 
 void get_sorted_by_distance_from_vertex(vector<int> &vertices, int v) {
@@ -443,7 +485,8 @@ void generate_query_test() {
     auto rd = default_random_engine();
 //    auto vec_rng = uniform_int_distribution<int>(0, queries_size-1);
 
-    for (int i=0; i<sample_count; i++) {
+    for (int s=0; s<sample_count; s++) {
+        int i=s;
 
         // Not by buckets
 //        // Setup query randomizers for different query types.
@@ -455,17 +498,19 @@ void generate_query_test() {
 //        auto ll_rng = uniform_int_distribution<int>(ll_queries.size()*start_percentile , ll_queries.size()*end_percentile - 1);
 
         // By buckets
-        auto vv_rng = uniform_int_distribution<int>(0, vv_buckets[i].size() - 1);
-        auto vl_rng = uniform_int_distribution<int>(0, vl_buckets[i].size() - 1);
-        auto ll_rng = uniform_int_distribution<int>(0, ll_buckets[i].size() - 1);
-        auto vec_rng = uniform_int_distribution<int>(0, vv_buckets[i].size() + vl_buckets[i].size() + ll_buckets[i].size() - 1);
-        int hmm=1;
-        while (vv_buckets[i].size() + vl_buckets[i].size() + ll_buckets[i].size() == 0) {
-            if (i+hmm >= 0 && i+hmm<sample_count) i+=hmm;
-            if (hmm>0) hmm = -hmm;
-            else hmm = -hmm + 1;
-        }
+        int vv_index = 0;
+        int vl_index = 0;
+        int ll_index = 0;
+
+        // TODO hmm
+//        int hmm=0;
+//        while (vv_buckets[i].size() + vl_buckets[i].size() + ll_buckets[i].size() == 0) {
+//            if (s+hmm >= 0 && s+hmm<sample_count) i = s+hmm;
+//            if (hmm>0) hmm = -hmm;
+//            else hmm = -hmm + 1;
+//        }
         assert(i>=0 && i<sample_count && vv_buckets[i].size() + vl_buckets[i].size() + ll_buckets[i].size() > 0);
+        auto vec_rng = uniform_int_distribution<int>(0, vv_buckets[i].size() + vl_buckets[i].size() + ll_buckets[i].size() - 1);
 
         // Not by buckets
 //        for (int j=0; j<sample_size; j++) {
@@ -473,15 +518,12 @@ void generate_query_test() {
 //            int r = vec_rng(rd);
 //            if (r < (int)vv_queries.size()) {
 //                int q = vv_rng(rd);
-//                // Query type (0: vertex-vertx), start vertex, end vertex, answer
 //                printf("0 %d %d %f\n", vv_queries[q].second.first, vv_queries[q].second.second, vv_queries[q].first);
 //            } else if (r < (int)vv_queries.size() + (int)vl_queries.size()){
 //                int q = vl_rng(rd);
-//                // Query type (0: vertex-vertx), start vertex, end vertex, answer
 //                printf("1 %d %d %f\n", vl_queries[q].second.second, vl_queries[q].second.first, vl_queries[q].first);
 //            } else {
 //                int q = ll_rng(rd);
-//                // Query type (0: vertex-vertx), start vertex, end vertex, answer
 //                printf("2 %d %d %f\n", ll_queries[q].second.first, ll_queries[q].second.second, ll_queries[q].first);
 //            }
 //        }
@@ -491,17 +533,17 @@ void generate_query_test() {
             // Select vector to random query from
             int r = vec_rng(rd);
             if (r < (int)vv_buckets[i].size()) {
-                int q = vv_rng(rd);
                 // Query type (0: vertex-vertx), start vertex, end vertex, answer
-                printf("0 %d %d %f\n", vv_buckets[i][q].second.first, vv_buckets[i][q].second.second, vv_buckets[i][q].first);
+                printf("0 %d %d %f\n", vv_buckets[i][vv_index].second.first, vv_buckets[i][vv_index].second.second, vv_buckets[i][vv_index].first);
+                if (++vv_index >= (int)vv_buckets[i].size()) vv_index = 0;
             } else if (r < (int)vv_buckets[i].size() + (int)vl_buckets[i].size()){
-                int q = vl_rng(rd);
                 // Query type (1: vertex-label), start vertex, end label, answer
-                printf("1 %d %d %f\n", vl_buckets[i][q].second.second, vl_buckets[i][q].second.first, vl_buckets[i][q].first);
+                printf("1 %d %d %f\n", vl_buckets[i][vl_index].second.first, vl_buckets[i][vl_index].second.second, vl_buckets[i][vl_index].first);
+                if (++vl_index >= (int)vl_buckets[i].size()) vl_index = 0;
             } else {
-                int q = ll_rng(rd);
                 // Query type (2: label-label), start label, end label, answer
-                printf("2 %d %d %f\n", ll_buckets[i][q].second.first, ll_buckets[i][q].second.second, ll_buckets[i][q].first);
+                printf("2 %d %d %f\n", ll_buckets[i][ll_index].second.first, ll_buckets[i][ll_index].second.second, ll_buckets[i][ll_index].first);
+                if (++ll_index >= (int)ll_buckets[i].size()) ll_index = 0;
             }
         }
     }
@@ -579,9 +621,8 @@ void generate_distance_vs_set_label_test() {
 }
 
 void generate_new_label_test() {
-    vector<pair<W, pair<int, int>>> queries_v_left, queries_l_left; // , queries_v_right, queries_l_right;
-    vector<vector<pair<W, pair<int, int>>>> buckets_v_left(10), buckets_l_left(10); //, buckets_v_right(10), buckets_l_right(10);
-    vector<int> closest_left(n); //, closest_right(n);
+    vector<pair<W, pair<int, int>>> queries_v, queries_l;
+    vector<int> closest(n);
     unordered_map<int, set<int>> lbl_to_ver;
 
     for (int i=0; i < (int)labels.size(); i++) {
@@ -591,76 +632,70 @@ void generate_new_label_test() {
     }
 
     // Get vertices most on both left and rigth
-    int left_v, right_v, left_lbl = max_label; // , right_lbl = max_label+1;
-    tie(left_v, right_v)= get_border_vertices();
-
-    // Get distances from those vertices
-    if (allowed_vl()) {
-        split_by_distance(get_queries_to_vertices(left_v), buckets_v_left);
-    }
-//    split_by_distance(get_queries_to_vertices(right_v), buckets_v_right);
-
-    // Get distances to labels
-    if (allowed_ll()) {
-        split_by_distance(get_queries_to_labels(left_v, lbl_to_ver), buckets_l_left);
-    }
-//    split_by_distance(get_queries_to_labels(right_v, lbl_to_ver), buckets_l_right);
+    int lv = get_border_vertex(), new_lbl = max_label+1;
 
     // Get list of vertices sorted by distance from border vertices
-    get_sorted_by_distance_from_vertex(closest_left, left_v);
-//    get_sorted_by_distance_from_vertex(closest_right, right_v);
-
-    if (option_start == -1) option_start = 0;
-    if (option_end == -1) option_end = 0.5;
-
-    // TODO Hmm... better idea ? now only left vertex used
+    get_sorted_by_distance_from_vertex(closest, lv);
 
     auto rd = default_random_engine();
     auto bucket_rng = uniform_int_distribution<int>(0, 9);
+    auto query_type_rng = uniform_int_distribution<int>(1, 2);
 
-
-    uniform_int_distribution<int> query_left_rng[10];
+    int query_index_v[10], query_index_l[10];
     for (int i=0; i<10; i++) {
-        query_left_rng[i] = uniform_int_distribution<int>(0, buckets_v_left[i].size() + buckets_l_left[i].size() - 1);
+        query_index_v[i] = 0;
+        query_index_l[i] = 0;
     }
 
     int ver_count = 0;
 
-//    option_end = min((float)0.5, option_end); // TODO error or not ? change limit ?
-
     for (int i=0; i<sample_count; i++) {
+
         float labeled_size = ((float)(i+1)/(float)sample_count)*(option_end)*n;
         int j=0;
         while (j<sample_size && ver_count < (int)ceil(labeled_size)) {
             // Generate set label query
-            int l = left_lbl;
-            int v = closest_left[ver_count];
+            int v = closest[ver_count];
             ver_count++;
             if (labels[v] != 0) {
                 lbl_to_ver[labels[v]].erase(v);
             }
-            lbl_to_ver[l].insert(v);
-            labels[v] = l;
-            printf("3 %d %d 0\n", v, l);
+            lbl_to_ver[new_lbl].insert(v);
+            labels[v] = new_lbl;
+            printf("3 %d %d 0\n", v, new_lbl);
             j++;
         }
+
+        vector<vector<pair<W, pair<int, int>>>> buckets_v(10), buckets_l(10);
+
+        // Get distances from new label to vertices
+        if (allowed_vl()) {
+            split_by_distance(get_queries_to_vertices(new_lbl, lbl_to_ver), buckets_v);
+        }
+
+        // Get distances from new label to labels
+        if (allowed_ll()) {
+            split_by_distance(get_queries_to_labels(new_lbl, lbl_to_ver), buckets_l);
+        }
+
         while (j<sample_size) {
             int b = bucket_rng(rd);
-            int q = query_left_rng[b](rd);
+            int qt = query_type_rng(rd);
+            while (!((qt == 1 && allowed_vl()) || (qt == 2 && allowed_ll()))) {
+                qt = query_type_rng(rd);
+            }
             // Generate distance query;
-            if (q < (int)buckets_v_left[b].size()) {
-                int v = buckets_v_left[b][q].second.second;
+            if (qt == 1) {
+                auto q = buckets_v[b][query_index_v[b]];
+                if (++query_index_v[b] >= (int)buckets_v[b].size()) query_index_v[b] = 0;
                 // Query type (1: vertex-label), start label, end label, answer
-                printf("1 %d %d %f\n", v, left_lbl, get_distance_to_label(v, left_lbl));
+                printf("1 %d %d %f\n", q.second.first, q.second.second, q.first);
             } else {
-                q -= buckets_v_left.size();
-                int l2 = buckets_l_left[b][q].second.second;
-                auto ll_rng = uniform_int_distribution<int>(0, buckets_l_left[b].size()-1);
-                while (lbl_to_ver[l2].empty()) l2 = buckets_l_left[b][ll_rng(rd)].second.second;
+                auto q = buckets_l[b][query_index_l[b]];
+                if (++query_index_l[b] >= (int)buckets_l[b].size()) query_index_l[b] = 0;
 
-                assert(l2 != left_lbl);
                 // Query type (2: label-label), start label, end label, answer
-                printf("2 %d %d %f\n", l2, left_lbl, get_distance_between_labels(l2, left_lbl, lbl_to_ver));
+                printf("2 %d %d %f\n", q.second.first, q.second.second, q.first);
             }
             j++;
         }
@@ -669,39 +704,63 @@ void generate_new_label_test() {
 
 void generate_build_labels_test(vector<pair<int, int>> &set_labels) {
     vector<pair<W, pair<int, int>>> vv_queries;
+    vector<vector<pair<W, pair<int, int>>>> vv_buckets(10);
     unordered_map<int, set<int>> lbl_to_ver;
+
+    option_start = 0;
+    option_end = 1;
 
     // Calculate queries
     if (allowed_vv()) {
         calc_some_vertex_vertex_queries(vv_queries);
+        split_by_distance(vv_queries, vv_buckets, option_start, option_end);
     }
 
-    // Clear labels
-    for (auto &l: labels) {
-        l = 0;
-    }
-
-    auto vec_vec_rng = uniform_int_distribution<int>(0, vv_queries.size()-1);
-    auto vec_rng = uniform_int_distribution<int>(0, n-1);
-    auto lbl_rng = uniform_int_distribution<int>(0, max_label-1);
     auto query_type_rng = uniform_int_distribution<int>(0, 2);
     auto rd = default_random_engine();
+    auto bucket_rng = uniform_int_distribution<int>(0, 9);
+
+    int query_index_vv[10], query_index_vl[10], query_index_ll[10];
+    for (int i=0; i<10; i++) {
+        query_index_vv[i] = 0;
+    }
 
     int lbl_count=0;
     for (int i=0; i<sample_count; i++) {
         float to_label = ((float)(i+1)/(float)sample_count)*set_labels.size();
         int j=0;
-        while (j<sample_size && lbl_count < (int)ceil(to_label)) {
+        while (j<sample_size && lbl_count < (int)ceil(to_label) && lbl_count < (int)set_labels.size()) {
             // Generate set label query
             int v = set_labels[lbl_count].first;
             int l = set_labels[lbl_count].second;
 
             lbl_count++;
+            assert(labels[v] == 0);
             lbl_to_ver[l].insert(v);
             labels[v] = l;
             printf("3 %d %d 0\n", v, l);
             j++;
         }
+
+        // Calculate distances to labels after changes
+        vector<pair<W, pair<int, int>>> vl_queries, ll_queries;
+        vector<vector<pair<W, pair<int, int>>>> vl_buckets(10), ll_buckets(10);
+
+        if (allowed_vl()) {
+            calc_all_vertex_label(vl_queries);
+            split_by_distance(vl_queries, vl_buckets, option_start, option_end);
+        }
+        if (allowed_ll()) {
+            calc_all_label_label_dist(ll_queries);
+            split_by_distance(ll_queries, ll_buckets, option_start, option_end);
+        }
+        for (int i=0; i<10; i++) {
+            query_index_vl[i] = 0;
+            query_index_ll[i] = 0;
+        }
+
+        int b = bucket_rng(rd);
+
         while (j<sample_size) {
             int qt = query_type_rng(rd);
             while (!((qt == 0 && allowed_vv()) || (qt == 1 && allowed_vl()) || (qt == 2 && allowed_ll()))) {
@@ -709,22 +768,22 @@ void generate_build_labels_test(vector<pair<int, int>> &set_labels) {
             }
 
             if (qt == 0) {
-                int q = vec_vec_rng(rd);
                 // Query type (0: vertex-vertx), start vertex, end vertex, answer
-                printf("0 %d %d %f\n", vv_queries[q].second.first, vv_queries[q].second.second, vv_queries[q].first);
+                auto q = vv_buckets[b][query_index_vv[b]];
+                printf("0 %d %d %f\n", q.second.first, q.second.second, q.first);
+                if (++query_index_vv[b] >= (int)vv_buckets[b].size()) query_index_vv[b] = 0;
             } else if (qt == 1){
-                int v = vec_rng(rd);
-                int l = lbl_rng(rd);
-                while (lbl_to_ver[l].empty()) l = lbl_rng(rd);
-                // Query type (0: vertex-vertx), start vertex, end vertex, answer
-                printf("1 %d %d %f\n", v, l, get_distance_to_label(v, l));
+                auto q = vl_buckets[b][query_index_vl[b]];
+                assert(abs(get_distance_to_label(q.second.second, q.second.first) - q.first) < 0.1);
+                // Query type (1: vertex-label), start vertex, end label, answer
+                printf("1 %d %d %f\n", q.second.first, q.second.second, q.first);
+                if (++query_index_vl[b] >= (int)vl_buckets[b].size()) query_index_vl[b] = 0;
             } else {
-                int l1 = lbl_rng(rd);
-                int l2 = lbl_rng(rd);
-                while (lbl_to_ver[l1].empty()) l1 = lbl_rng(rd);
-                while (lbl_to_ver[l2].empty()) l2 = lbl_rng(rd);
-                // Query type (0: vertex-vertx), start vertex, end vertex, answer
-                printf("2 %d %d %f\n", l1, l2, get_distance_between_labels(l1, l2, lbl_to_ver));
+                auto q = ll_buckets[b][query_index_ll[b]];
+                assert(abs(get_distance_between_labels(q.second.second, q.second.first, lbl_to_ver) - q.first) < 0.1);
+                // Query type (2: label-label), start label, end label, answer
+                printf("2 %d %d %f\n", q.second.first, q.second.second, q.first);
+                if (++query_index_ll[b] >= (int)ll_buckets[b].size()) query_index_ll[b] = 0;
             }
             j++;
         }
@@ -794,7 +853,9 @@ int main(int argc, char* argv[])
                 fprintf(stderr, "Error vertex-label or label-label queries must by allowed for test type 2\n");
                 exit(1);
             }
-            sample_size += option_end*n;
+
+            if (option_end == -1) option_end = 0.1;
+            sample_size += ceil((option_end*n)/sample_count);
 
             printf("%d %d %d %d %d\n", sample_count, sample_size, test_type, allowed_queries, weights_as_distance);
             generate_new_label_test();
@@ -806,6 +867,7 @@ int main(int argc, char* argv[])
             for (int i=0; i<n; i++) {
                 if (labels[i] > 0) {
                     set_labels.emplace_back(i, labels[i]);
+                    labels[i] = 0;
                 }
             }
             random_shuffle(set_labels.begin(), set_labels.end());

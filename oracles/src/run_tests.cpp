@@ -405,7 +405,7 @@ int main(int argc, char* argv[]) {
     printf("ASTAR\n");
     {
         auto t1 = std::chrono::steady_clock::now();
-        AstarOracle oracle(n, m, max_label, max_speed, edges, distances, labels, coords);
+        AstarOracle oracle(n, m, max_speed, edges, distances, labels, coords);
         auto t2 = std::chrono::steady_clock::now();
         build_time = t2 - t1;
         printf("Czas budowy: %lfs   pamięć: %ldK\n", build_time.count() / 1000, get_mem_size() - mem_begin);
@@ -419,7 +419,7 @@ int main(int argc, char* argv[]) {
     printf("DIJKSTRA\n");
     {
         auto t1 = std::chrono::steady_clock::now();
-        DijkstraOracle oracle(n, m, max_label, edges, distances, labels);
+        DijkstraOracle oracle(n, m, edges, distances, labels);
         auto t2 = std::chrono::steady_clock::now();
         build_time = t2 - t1;
         printf("Czas budowy: %lfs   pamięć: %ldK\n", build_time.count() / 1000, get_mem_size() - mem_begin);
