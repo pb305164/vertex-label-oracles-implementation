@@ -605,13 +605,13 @@ void generate_distance_vs_set_label_test() {
                     printf("0 %d %d %f\n", vv_queries[vvq].second.first, vv_queries[vvq].second.second, vv_queries[vvq].first);
                 } else if (query_type == 1){
                     int l = label_rng(rd), v = vertex_rng(rd);
-                    while (l >= max_label) l = label_rng(rd);
+                    while (lbl_to_ver.count(l) == 0 || lbl_to_ver[l].size() == 0) l = label_rng(rd);
                     // Query type (1: vertex-label), start vertex, end label, answer
                     printf("1 %d %d %f\n", v, l, get_distance_to_label(v, l));
                 } else {
                     int l1 = label_rng(rd), l2 = label_rng(rd);
-                    while (l1 >= max_label) l1 = label_rng(rd);
-                    while (l2 >= max_label) l2 = label_rng(rd);
+                    while (lbl_to_ver.count(l1) == 0 || lbl_to_ver[l1].size() == 0) l1 = label_rng(rd);
+                    while (lbl_to_ver.count(l2) == 0 || lbl_to_ver[l2].size() == 0) l2 = label_rng(rd);
                     // Query type (2: label-label), start label, end label, answer
                     printf("2 %d %d %f\n", l1, l2, get_distance_between_labels(l1, l2, lbl_to_ver));
                 }
@@ -632,7 +632,7 @@ void generate_new_label_test() {
     }
 
     // Get vertices most on both left and rigth
-    int lv = get_border_vertex(), new_lbl = max_label+1;
+    int lv = get_border_vertex(), new_lbl = ++max_label;
 
     // Get list of vertices sorted by distance from border vertices
     get_sorted_by_distance_from_vertex(closest, lv);
