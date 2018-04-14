@@ -82,7 +82,6 @@ private:
 
     // Return position in nodes vector (create if not found)
     void find(int pos, Key k, vector<Key> &path) {
-        assert(pos != -1);
         path.push_back(pos);
         while (pos != -1) {
             MapNode &n = nodes[pos];
@@ -107,7 +106,7 @@ private:
     }
 
 public:
-    ScapegoatMap(): _size(0), nodes() {}
+    ScapegoatMap(): _size(0) {}
 
     void inorder(vector<pair<Key, Val>> &ret, int pos) {
         if (pos != -1) {
@@ -224,14 +223,14 @@ public:
                 return nodes[path.back()].val;
             } else {
                 // Add new key
-                int new_ptr = (int)nodes.size();
+                path.back() = (int)nodes.size();
                 nodes.push_back(MapNode(k, Val()));
                 _size++;
                 MapNode &parent = nodes[*(path.rbegin()+1)];
                 if (parent.key < k) {
-                    parent.right = new_ptr;
+                    parent.right = path.back();
                 } else {
-                    parent.left = new_ptr;
+                    parent.left = path.back();
                 }
 
                 // Check if tree is unbalanced
@@ -255,8 +254,11 @@ public:
                         }
                     } while (3*child_size <= 2*parent_size);
                     rebalance(parent);
+                    path.clear();
+                    find(0, k, path);
                 }
-                return nodes[new_ptr].val;
+                assert(path.back() != -1);
+                return nodes[path.back()].val;
             }
         } else {
             _size++;
