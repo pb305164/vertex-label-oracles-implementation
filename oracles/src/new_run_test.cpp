@@ -10,6 +10,7 @@
 #include "hierarchy_oracle.h"
 #include "hierarchy_oracle_light.h"
 #include "hierarchy_oracle_light_path.h"
+#include "routing_kit_oracle.h"
 
 #include <chrono>
 
@@ -45,7 +46,7 @@ long get_mem_usage() {
 
 float EPS = 1.0, min_port_dist = -1.0;
 int RO = -1, oracle_type = -1;
-char *osrm_path = nullptr, *graph_path = nullptr;
+char *osrm_path = nullptr, *pbf_path = nullptr, *graph_path = nullptr;
 vector<string> test_paths;
 int n, m, max_label, sample_count, sample_size, test_type, allowed_queries, weights_as_distance;
 
@@ -69,10 +70,12 @@ void print_help() {
                     "                      10: HierarchyLightPath\n"
                     "                      11: Dijkstra\n"
                     "                      12: Astar\n"
+                    "                      13: RoutingKitOracle\n"
 
                     "  -EPS float   : Epsilon value for planar oracles (default = 1.0), ignored at the moment\n\n"
                     "  -MPD float   : Minimal distances between portals for hierarchal oracles (default 0 for light, 15 for full)\n\n"
                     "  -RO  int     : Ro value for aprox oracles (default -1)\n\n"
+                    "  -PBF path    : Path to pbf file for RoutingKitOracle\n\n"
     );
 
 }
@@ -143,6 +146,14 @@ void parse_program_options(int argc, char* argv[]) {
                 print_help();
                 exit(1);
             }
+        } else if (strcmp("-PBF", argv[i]) == 0) {
+            i++;
+            if (i >= argc) {
+                fprintf(stderr, "Error while parsing -PBF option, no value\n\n");
+                print_help();
+                exit(1);
+            }
+            pbf_path = argv[i];
         } else {
             if (osrm_path == nullptr) {
                 osrm_path = argv[i];
@@ -836,13 +847,13 @@ int main(int argc, char* argv[]) {
         }
         case 7: {
             auto t1 = std::chrono::steady_clock::now();
-            OsrmOracle oracle(osrm_path, max_label, coords, labels);
+            OsrmOracle oracle(osrm_path, coords, labels);
             auto t2 = std::chrono::steady_clock::now();
             build_time = t2 - t1;
             for (size_t i = 0; i < test_paths.size(); i++) {
                 FILE *out_file = prep_test(i);
                 fprintf(out_file, "%d %d %lf %ld\n", sample_count, sample_size, build_time.count(), get_mem_usage());
-                run_VV_VL_LL_queries(out_file, oracle, queries);
+                run_all_queries(out_file, oracle, queries);
                 fclose(out_file);
             }
             break;
@@ -912,6 +923,26 @@ int main(int argc, char* argv[]) {
         case 12: {
             auto t1 = std::chrono::steady_clock::now();
             AstarOracle oracle(n, m, max_speed, edges, distances, labels, coords);
+            auto t2 = std::chrono::steady_clock::now();
+            build_time = t2 - t1;
+            for (size_t i = 0; i < test_paths.size(); i++) {
+                FILE *out_file = prep_test(i);
+                prep_oracle(oracle);
+                fprintf(out_file, "%d %d %lf %ld\n", sample_count, sample_size, build_time.count(), get_mem_usage());
+                run_all_queries(out_file, oracle, queries);
+                fclose(out_file);
+            }
+            break;
+        }
+
+        case 13: {
+            if (pbf_path == nullptr) {
+                print_help();
+                fprintf(stderr, "Cannot build RoutingKitOracle: no path to pbf file specified\n");
+                exit(1);
+            }
+            auto t1 = std::chrono::steady_clock::now();
+            RoutingKitOracle oracle(pbf_path, labels);
             auto t2 = std::chrono::steady_clock::now();
             build_time = t2 - t1;
             for (size_t i = 0; i < test_paths.size(); i++) {

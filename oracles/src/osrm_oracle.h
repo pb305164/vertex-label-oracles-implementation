@@ -4,6 +4,7 @@
 #include "osrm/engine_config.hpp"
 #include "osrm/osrm.hpp"
 
+#include <unordered_map>
 #include <vector>
 #include <set>
 
@@ -14,10 +15,10 @@ private:
     const osrm::OSRM osrm;
     std::vector<std::pair<float, float> > coords;
     std::vector<int> labels;
-    std::vector<std::set<int>> lbl_to_ver;
+    std::unordered_map<int, std::set<int>> lbl_to_ver;
 
 public:
-    OsrmOracle(char *osrm_file, int max_label, std::vector<std::pair<float, float> > &_coords, std::vector<int> &_labels);
+    OsrmOracle(char *osrm_file, std::vector<std::pair<float, float> > &_coords, std::vector<int> &_labels);
 
     float distanceToVertex(int s, int t);
     std::pair<float, int> distanceToLabel(int s, int l);
