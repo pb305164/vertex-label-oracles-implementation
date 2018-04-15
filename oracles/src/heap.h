@@ -14,7 +14,7 @@ private:
         int left;
         int right;
         MapNode(Key _key, Val _val): key(_key), val(_val), left(-1), right(-1) {};
-        MapNode(): key(-1), val(-1), left(-1), right(-1) {};
+        MapNode(): key(), val(), left(-1), right(-1) {};
     };
 
     size_t _size;
@@ -81,8 +81,7 @@ private:
     }
 
     // Return position in nodes vector (create if not found)
-    void find(int pos, Key k, vector<Key> &path) {
-        assert(pos != -1);
+    void find(int pos, Key k, vector<int> &path) {
         path.push_back(pos);
         while (pos != -1) {
             MapNode &n = nodes[pos];
@@ -106,16 +105,24 @@ private:
         return pos;
     }
 
-public:
-    ScapegoatMap(): _size(0), nodes() {}
-
-    void inorder(vector<pair<Key, Val>> &ret, int pos) {
-        if (pos != -1) {
-            inorder(ret, nodes[pos].left);
-            ret.push_back(make_pair(nodes[pos].key, nodes[pos].val));
-            inorder(ret, nodes[pos].right);
+    int getMin() {
+        if (_size == 0) return -1;
+        int pos = 0;
+        while (nodes[pos].left != -1) {
+            pos = nodes[pos].left;
         }
-    };
+        return pos;
+    }
+
+    // Return size of subtree
+    size_t size(int pos) {
+        if (pos == -1) {
+            return 0;
+        } else {
+            return size(nodes[pos].left) + 1 + size(nodes[pos].right);
+        }
+    }
+
 
     void inorder2(vector<pair<Key, Val>> &ret, vector<int> &free_pos, int pos) {
         if (pos != -1) {
@@ -133,6 +140,18 @@ public:
         }
         assert(_size == ret.size());
         return ret;
+    };
+
+
+public:
+    ScapegoatMap(): _size(0), nodes() {}
+
+    void inorder(vector<pair<Key, Val>> &ret, int pos) {
+        if (pos != -1) {
+            inorder(ret, nodes[pos].left);
+            ret.push_back(make_pair(nodes[pos].key, nodes[pos].val));
+            inorder(ret, nodes[pos].right);
+        }
     };
 
     // Remove vertex v from heap
@@ -175,7 +194,6 @@ public:
                     parent = pos;
                     pos = n.left;
                 }
-
             }
         }
         if (_size < nodes.size()/2) {
@@ -186,16 +204,6 @@ public:
     // Return number of elements in map (not vector size)
     size_t size() {
         return _size;
-    }
-
-    // Return size of subtree
-    size_t size(int pos) {
-        if (pos == -1) {
-            return 0;
-        } else {
-            return size(nodes[pos].left) + 1 + size(nodes[pos].right);
-        }
-
     }
 
     void clear() {
@@ -215,23 +223,29 @@ public:
         return 0;
     }
 
+    pair<Key, Val> top() {
+        assert(_size > 0);
+        MapNode &n  = nodes[getMin()];
+        return make_pair(n.key, n.val);
+    };
+
     Val& operator[](Key k) {
         if (_size > 0) {
-            vector<Key> path;
+            vector<int> path;
             find(0, k, path);
             if (path.back() != -1) {
                 // Key found return value
                 return nodes[path.back()].val;
             } else {
                 // Add new key
-                int new_ptr = (int)nodes.size();
+                path.back() = (int)nodes.size();
                 nodes.push_back(MapNode(k, Val()));
                 _size++;
                 MapNode &parent = nodes[*(path.rbegin()+1)];
                 if (parent.key < k) {
-                    parent.right = new_ptr;
+                    parent.right = path.back();
                 } else {
-                    parent.left = new_ptr;
+                    parent.left = path.back();
                 }
 
                 // Check if tree is unbalanced
@@ -246,7 +260,6 @@ public:
                         child_size = parent_size;
                         // Add other child size
                         it++;
-                        assert(it != path.rend());
                         parent = *it;
                         if (nodes[parent].key < k) {
                             parent_size += size(nodes[parent].left) + 1;
@@ -255,8 +268,10 @@ public:
                         }
                     } while (3*child_size <= 2*parent_size);
                     rebalance(parent);
+                    path.clear();
+                    find(0, k, path);
                 }
-                return nodes[new_ptr].val;
+                return nodes[path.back()].val;
             }
         } else {
             _size++;
@@ -265,6 +280,7 @@ public:
         }
     }
 };
+
 
 template<class T>
 class Heap {
@@ -275,8 +291,8 @@ private:
 
     // Swaps position p1 and p2 in heap and update positions accordingly
     void hswap(T &ver_to_pos, int p1, int p2) {
-        assert(p1 < (int)heap.size() && p2 < (int)heap.size());
-        swap(ver_to_pos[heap[p1].second], ver_to_pos[heap[p2].second]);
+        ver_to_pos[heap[p1].second] = p2;
+        ver_to_pos[heap[p2].second] = p1;
         swap(heap[p1], heap[p2]);
     }
 
@@ -318,14 +334,21 @@ public:
     // Remove vertex v from heap
     void erase(T &ver_to_pos, int v) {
         int vpos = ver_to_pos[v];
-        assert(vpos > 0 && vpos < (int)heap.size());
-        hswap(ver_to_pos, vpos, (int)heap.size()-1);
-        ver_to_pos.erase(v);
-        heap.pop_back();
+        // Check if was last element
+        if (vpos < (int)heap.size()-1) {
+            hswap(ver_to_pos, vpos, (int)heap.size()-1);
+            heap.pop_back();
+            // Since vertex is removed from anywhere in the heap and is replaced by last element it could go both higher or lower
+            if (vpos > 1 && heap[vpos] < heap[vpos / 2]) push_top(ver_to_pos, vpos);
+            else push_bot(ver_to_pos, vpos);
+        } else {
+            heap.pop_back();
+        }
 
-        // Since vertex is removed from anywhere in the heap and is replaced by last element it could go both higher or lower
-        if (vpos > 1 && heap[vpos] < heap[vpos/2]) push_top(ver_to_pos, vpos);
-        else push_bot(ver_to_pos, vpos);
+        ver_to_pos.erase(v);
+        if (heap.capacity() > 2*heap.size()) {
+            heap.shrink_to_fit();
+        }
     }
 
     // Insert distance d for vertex v into heap and assign its position (special version from vector)
@@ -339,19 +362,23 @@ public:
     // Remove vertex v from heap (specific version for vector, cannot use erase)
     void erase(vector<int> &ver_to_pos, int v) {
         int vpos = ver_to_pos[v];
-        hswap(ver_to_pos, vpos, (int)heap.size()-1);
+        assert(vpos > 0 && vpos < (int)heap.size());
+        // Check if was last element
+        if (vpos < (int)heap.size()-1) {
+            hswap(ver_to_pos, vpos, (int)heap.size()-1);
+            heap.pop_back();
+            // Since vertex is removed from anywhere in the heap and is replaced by last element it could go both higher or lower
+            if (vpos > 1 && heap[vpos] < heap[vpos / 2]) push_top(ver_to_pos, vpos);
+            else push_bot(ver_to_pos, vpos);
+        } else {
+            heap.pop_back();
+        }
+
         ver_to_pos[v] = 0;
-        heap.pop_back();
-
-        // Since vertex is removed from anywhere in the heap and is replaced by last element it could go both higher or lower
-        if (vpos > 1 && heap[vpos] < heap[vpos/2]) push_top(ver_to_pos, vpos);
-        else push_bot(ver_to_pos, vpos);
-
         if (heap.capacity() > 2*heap.size()) {
             heap.shrink_to_fit();
         }
     }
-
 
     // Return element at given position in heap
     pair<W, int> at(int pos) {
@@ -380,6 +407,5 @@ public:
         return heap.size()-1;
     }
 };
-
 
 #endif //VERTEX_LABEL_ORACLES_HEAP_H

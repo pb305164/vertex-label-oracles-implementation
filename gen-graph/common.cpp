@@ -18,7 +18,7 @@ mpreal calc_distance(mpreal lat1, mpreal lon1, mpreal lat2, mpreal lon2) {
 
 // Return string representation of mpreal
 std::string str(mpreal mpr) {
-    return mpr.toString("%.20RNf");
+    return mpr.toString("%.10RNf");
 }
 
 

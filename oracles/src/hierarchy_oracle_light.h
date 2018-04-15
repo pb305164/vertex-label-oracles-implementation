@@ -228,13 +228,11 @@ public:
                 portals[p].N[v_lbl].erase(portals[p].ver_pos, v);
             }
         }
+        label[v] = l;
 
         if (l != 0) {
-            label[v] = l;
-
             // Add vertex to N sets
             for (int p: neigh_to_portals[neighborhood[v]]) {
-                assert(portal_distances[p].count(v) > 0);
                 portals[p].N[l].insert(portals[p].ver_pos, v, portal_distances[p][v]);
             }
         }

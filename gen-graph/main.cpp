@@ -197,6 +197,14 @@ void parse_program_options(int argc, char* argv[]) {
     }
 }
 
+// Return default road name for given max_speed
+string get_road_type(mpreal max_speed) {
+    if (max_speed >= 25) return "primary";
+    if (max_speed >= 13.88) return "residential";
+    if (max_speed >= 8.333) return "living_street";
+    return "sevice";
+}
+
 void print_osm(unordered_mapB<int, Node> &nodes, unordered_mapB<int, set<Edge>> &edges) {
     string new_path(osm_path);
     new_path.insert(new_path.find_last_of("/")+1, "Graph_");
@@ -223,9 +231,9 @@ void print_osm(unordered_mapB<int, Node> &nodes, unordered_mapB<int, set<Edge>> 
                         "<way>\n"
                         "    <nd ref=\"%d\"/>\n"
                         "    <nd ref=\"%d\"/>\n"
-                        "    <tag k=\"highway\" v=\"motorway\"/>\n"
+                        "    <tag k=\"highway\" v=\"%s\"/>\n"
                         "    <tag k=\"maxspeed\" v=\"%s\"/>\n"
-                        "</way>\n", e.source, e.dest, str(e.max_speed*3.6).c_str() // Convert max speed from m/s to km/h
+                        "</way>\n", e.source, e.dest, get_road_type(e.max_speed).c_str(), str(e.max_speed*3.6).c_str() // Convert max speed from m/s back to km/h
                 );
             }
         }

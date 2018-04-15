@@ -25,11 +25,11 @@ EngineConfig prepareConfig(char *osrm_file, EngineConfig &config) {
 }
 
 
-OsrmOracle::OsrmOracle(char *osrm_file, int max_label, std::vector<pair<float, float> > &_coords, std::vector<int> &_labels):
+OsrmOracle::OsrmOracle(char *osrm_file, std::vector<pair<float, float> > &_coords, std::vector<int> &_labels):
         osrm{(prepareConfig(osrm_file, config), config)},
         coords(_coords.size()),
         labels(_labels),
-        lbl_to_ver(max_label) {
+        lbl_to_ver() {
     coords.resize(_coords.size());
     for (int i=0; i < (int)labels.size(); i++) {
         if (labels[i] > 0) {
@@ -143,7 +143,8 @@ pair<float, pair<int, int> > OsrmOracle::distanceBetweenLabels(int l1, int l2) {
             return make_pair(min_d, make_pair(min_s, min_t));
         }
     }
-    return make_pair(-1, make_pair(-1, -1));}
+    return make_pair(-1, make_pair(-1, -1));
+}
 
 
 void OsrmOracle::setLabel(int v, int l) {

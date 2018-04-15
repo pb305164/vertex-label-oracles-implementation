@@ -379,7 +379,7 @@ int main(int argc, char* argv[]) {
         printf("OSRM Oracle\n");
         {
             auto t1 = std::chrono::steady_clock::now();
-            OsrmOracle oracle(argv[1], max_label, coords, labels);
+            OsrmOracle oracle(argv[1], coords, labels);
             auto t2 = std::chrono::steady_clock::now();
             build_time = t2 - t1;
             printf("Czas budowy: %lfs\n", build_time.count()/1000);
