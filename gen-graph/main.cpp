@@ -213,27 +213,28 @@ void print_osm(unordered_mapB<int, Node> &nodes, unordered_mapB<int, set<Edge>> 
         fprintf(stderr, "ERROR while writing new osm file\n");
         exit(1);
     }
-    fprintf(osm_file, "<?xml version='1.0' encoding='UTF-8'?>\n<osm version=\"0.6\">\n");
+    fprintf(osm_file, "<?xml version='1.0' encoding='UTF-8'?>\n<osm version=\"0.6\" generator=\"osmconvert 0.8.4\" timestamp=\"2018-01-22T02:00:00Z\">\n");
     for (auto &node: nodes) {
         if (node.second.label == -1) {
-            fprintf(osm_file, "<node id=\"%d\" lat=\"%s\" lon=\"%s\"/>\n", node.first, str(node.second.lat).c_str(), str(node.second.lon).c_str());
+            fprintf(osm_file, "<node id=\"%d\" lat=\"%s\" lon=\"%s\" version=\"1\"/>\n", node.first, str(node.second.lat).c_str(), str(node.second.lon).c_str());
         } else {
-            fprintf(osm_file, "<node id=\"%d\" lat=\"%s\" lon=\"%s\">\n"
+            fprintf(osm_file, "<node id=\"%d\" lat=\"%s\" lon=\"%s\" version=\"1\">\n"
                            "    <tag k=\"shop\" v=\"%d\"/>\n"
                            "</node>\n", node.first, str(node.second.lat).c_str(), str(node.second.lon).c_str(), node.second.label);
         }
 
     }
+    int edge_count=0;
     for (auto &es: edges) {
         for (const Edge &e: es.second) {
             if (e.source < e.dest) {
                 fprintf(osm_file,
-                        "<way>\n"
+                        "<way id=\"%d\" version=\"1\">\n"
                         "    <nd ref=\"%d\"/>\n"
                         "    <nd ref=\"%d\"/>\n"
                         "    <tag k=\"highway\" v=\"%s\"/>\n"
-                        "    <tag k=\"maxspeed\" v=\"%s\"/>\n"
-                        "</way>\n", e.source, e.dest, get_road_type(e.max_speed).c_str(), str(e.max_speed*3.6).c_str() // Convert max speed from m/s back to km/h
+                        "    <tag k=\"maxspeed\" v=\"%llu\"/>\n"
+                        "</way>\n", edge_count++, e.source, e.dest, get_road_type(e.max_speed).c_str(), (e.max_speed*3.6).toULLong() // Convert max speed from m/s back to km/h
                 );
             }
         }
