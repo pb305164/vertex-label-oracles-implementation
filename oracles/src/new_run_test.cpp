@@ -168,61 +168,101 @@ void parse_program_options(int argc, char* argv[]) {
 }
 
 template <class T>
-void run_query0(FILE *out_file, T &oracle, tuple<int, int, int, float> &q) {
+tuple< W, W, std::chrono::duration<double, std::milli> > run_query0(T &oracle, tuple<int, int, int, float> &q) {
     auto t1 = std::chrono::steady_clock::now();
     float d = oracle.distanceToVertex(get<1>(q), get<2>(q));
     auto t2 = std::chrono::steady_clock::now();
     std::chrono::duration<double, std::milli> t = t2 -t1;
-    fprintf(out_file, "%d %f %f %lf\n", 0, d, get<3>(q), t.count());
+    return make_tuple(d, get<3>(q), t);
+    //fprintf(out_file, "%d %f %f %lf\n", 0, d, get<3>(q), t.count());
 }
 
 template <class T>
-void run_query1(FILE *out_file, T &oracle, tuple<int, int, int, float> &q) {
+tuple< W, W, std::chrono::duration<double, std::milli> > run_query1(T &oracle, tuple<int, int, int, float> &q) {
     auto t1 = std::chrono::steady_clock::now();
     pair<W, int> d = oracle.distanceToLabel(get<1>(q), get<2>(q));
     auto t2 = std::chrono::steady_clock::now();
     std::chrono::duration<double, std::milli> t = t2 -t1;
-    fprintf(out_file, "%d %f %f %lf\n", 1, d.first, get<3>(q), t.count());
+    return make_tuple(d.first, get<3>(q), t);
+    //fprintf(out_file, "%d %f %f %lf\n", 1, d.first, get<3>(q), t.count());
 }
 
 template <class T>
-void run_query2(FILE *out_file, T &oracle, tuple<int, int, int, float> &q) {
+tuple< W, W, std::chrono::duration<double, std::milli> > run_query2(T &oracle, tuple<int, int, int, float> &q) {
     auto t1 = std::chrono::steady_clock::now();
     pair<W, pair<int, int>> d = oracle.distanceBetweenLabels(get<1>(q), get<2>(q));
     auto t2 = std::chrono::steady_clock::now();
     std::chrono::duration<double, std::milli> t = t2 -t1;
-    fprintf(out_file, "%d %f %f %lf\n", 2, d.first, get<3>(q), t.count());
+    return make_tuple(d.first, get<3>(q), t);
+    //fprintf(out_file, "%d %f %f %lf\n", 2, d.first, get<3>(q), t.count());
 }
 
 template <class T>
-void run_query3(FILE *out_file, T &oracle, tuple<int, int, int, float> &q) {
+std::chrono::duration<double, std::milli> run_query3(T &oracle, tuple<int, int, int, float> &q) {
     auto t1 = std::chrono::steady_clock::now();
     oracle.setLabel(get<1>(q), get<2>(q));
     auto t2 = std::chrono::steady_clock::now();
     std::chrono::duration<double, std::milli> t = t2 -t1;
-    fprintf(out_file, "%d %f %f %lf\n", 3, .0, .0, t.count());
+    return t;
+    //fprintf(out_file, "%d %f %f %lf\n", 3, .0, .0, t.count());
 }
 
 template <class T>
 void run_all_queries(FILE *out_file, T &oracle, vector<tuple<int, int, int, float>> &queries)
 {
     size_t count=0;
+    int count_q=0,count_u=0;
+    float sum_ratio=0., max_ratio=0.;
+    W d_got,d_exp;
+    std::chrono::duration<double, std::milli> time;
+    std::chrono::duration<double, std::milli> t_sum_q = std::chrono::milliseconds::zero(),
+                                              t_sum_u = std::chrono::milliseconds::zero();
+
     for (auto &q: queries) {
         // For each query there are 5 numbers printed out: type of query, oracle answer, solution, time in miliseconds, estimated memory usage
         if (get<0>(q) == 0) {
-            run_query0(out_file, oracle, q);
+            tie(d_got, d_exp, time) = run_query0(oracle, q);
+            if(d_exp == 0) d_exp=0.00000001;
+            sum_ratio+=d_got/d_exp; max_ratio=max(max_ratio,d_got/d_exp);
+            count_q++; t_sum_q+=time;
         } else if (get<0>(q) == 1) {
-            run_query1(out_file, oracle, q);
+            tie(d_got, d_exp, time) = run_query1(oracle, q);
+            if(d_exp == 0) d_exp=0.00000001;
+            sum_ratio+=d_got/d_exp; max_ratio=max(max_ratio,d_got/d_exp);
+            count_q++; t_sum_q+=time;
         } else if (get<0>(q) == 2) {
-            run_query2(out_file, oracle, q);
+            tie(d_got, d_exp, time) = run_query2(oracle, q);
+            if(d_exp == 0) d_exp=0.00000001;
+            sum_ratio+=d_got/d_exp; max_ratio=max(max_ratio,d_got/d_exp);
+            count_q++; t_sum_q+=time;
         } else if (get<0>(q) == 3) {
-            run_query3(out_file, oracle, q);
+            time = run_query3(oracle, q);
+            count_u++; t_sum_u+=time;
         } else {
             fprintf(stderr, "Error, bad query type ?\n");
             exit(1);
         }
         count++;
-        if (count%sample_size==0) fprintf(out_file, "%ld\n", get_mem_usage());
+        if (count%sample_size==0) {
+            //fprintf(out_file, "%ld\n", get_mem_usage())
+            float avr_q_time=0.; float avr_u_time=0.; float avr_time=0.; float avr_ratio=0.;
+            if(count_q > 0) avr_q_time=t_sum_q.count()/count_q;
+            if(count_u > 0) avr_u_time=t_sum_u.count()/count_u;
+            if(count_u+count_q > 0) {
+                avr_time=(t_sum_q.count()+t_sum_u.count())/(count_u+count_q);
+                avr_ratio=sum_ratio/(count_u+count_q);
+            }
+            fprintf(out_file, "%f %f %f %f %f\n",
+                    avr_q_time,
+                    avr_u_time,
+                    avr_time,
+                    avr_ratio,
+                    max_ratio);
+            count_q=0; count_u=0; sum_ratio=0.; max_ratio=0.;
+            t_sum_q = std::chrono::milliseconds::zero();
+            t_sum_u = std::chrono::milliseconds::zero();
+        }
+
     }
 }
 
@@ -237,18 +277,48 @@ void run_VL_SL_queries(FILE *out_file, T &oracle, vector<tuple<int, int, int, fl
         }
     }
     size_t count=0;
+    int count_q=0,count_u=0;
+    float sum_ratio=0., max_ratio=0.;
+    W d_got,d_exp;
+    std::chrono::duration<double, std::milli> time;
+    std::chrono::duration<double, std::milli> t_sum_q = std::chrono::milliseconds::zero(),
+                                              t_sum_u = std::chrono::milliseconds::zero();
+
+
     for (auto &q: queries) {
         // For each query there are 5 numbers printed out: type of query, oracle answer, solution, time in miliseconds, estimated memory usage
         if (get<0>(q) == 1) {
-            run_query1(out_file, oracle, q);
+            tie(d_got, d_exp, time)=run_query1(oracle, q);
+            if(d_exp == 0) d_exp=0.00000001;
+            sum_ratio+=d_got/d_exp; max_ratio=max(max_ratio,d_got/d_exp);
+            count_q++; t_sum_q+=time;
         } else if (get<0>(q) == 3) {
-            run_query3(out_file, oracle, q);
+            time=run_query3(oracle, q);
+            count_u++; t_sum_u+=time;
         } else {
             fprintf(stderr, "Error, bad query type ?\n");
             exit(1);
         }
         count++;
-        if (count%sample_size==0) fprintf(out_file, "%ld\n", get_mem_usage());
+        if (count%sample_size==0) {
+            //fprintf(out_file, "%ld\n", get_mem_usage());
+            float avr_q_time=0.; float avr_u_time=0.; float avr_time=0.; float avr_ratio=0.;
+            if(count_q > 0) avr_q_time=t_sum_q.count()/count_q;
+            if(count_u > 0) avr_u_time=t_sum_u.count()/count_u;
+            if(count_u+count_q > 0) {
+                avr_time=(t_sum_q.count()+t_sum_u.count())/(count_u+count_q);
+                avr_ratio=sum_ratio/(count_u+count_q);
+            }
+            fprintf(out_file, "%f %f %f %f %f\n",
+                    avr_q_time,
+                    avr_u_time,
+                    avr_time,
+                    avr_ratio,
+                    max_ratio);
+            count_q=0; count_u=0; sum_ratio=0.; max_ratio=0.;
+            t_sum_q = std::chrono::milliseconds::zero();
+            t_sum_u = std::chrono::milliseconds::zero();
+        }
     }
 }
 
@@ -263,18 +333,47 @@ void run_VV_VL_queries(FILE *out_file, T &oracle, vector<tuple<int, int, int, fl
         }
     }
     size_t count=0;
+    int count_q=0;
+    float sum_ratio=0., max_ratio=0.;
+    W d_got,d_exp;
+    std::chrono::duration<double, std::milli> time;
+    std::chrono::duration<double, std::milli> t_sum_q = std::chrono::milliseconds::zero();
+
     for (auto &q: queries) {
         // For each query there are 5 numbers printed out: type of query, oracle answer, solution, time in miliseconds, estimated memory usage
         if (get<0>(q) == 0) {
-            run_query1(out_file, oracle, q);
+            tie(d_got, d_exp, time)=run_query0(oracle, q);
+            if(d_exp == 0) d_exp=0.00000001;
+            sum_ratio+=d_got/d_exp; max_ratio=max(max_ratio,d_got/d_exp);
+            count_q++; t_sum_q+=time;
         } else if (get<0>(q) == 1) {
-            run_query3(out_file, oracle, q);
+            tie(d_got, d_exp, time)=run_query1(oracle, q);
+            if(d_exp == 0) d_exp=0.00000001;
+            sum_ratio+=d_got/d_exp; max_ratio=max(max_ratio,d_got/d_exp);
+            count_q++; t_sum_q+=time;
         } else {
             fprintf(stderr, "Error, bad query type ?\n");
             exit(1);
         }
         count++;
-        if (count%sample_size==0) fprintf(out_file, "%ld\n", get_mem_usage());
+        if (count%sample_size==0) {
+            //fprintf(out_file, "%ld\n", get_mem_usage());
+            float avr_q_time=0.; float avr_u_time=0.; float avr_time=0.; float avr_ratio=0.;
+            if(count_q > 0) avr_q_time=t_sum_q.count()/count_q;
+            //if(count_u > 0) avr_u_time=t_sum_u.count()/count_u;
+            if(count_q > 0) {
+                avr_time=(t_sum_q.count())/(count_q);
+                avr_ratio=sum_ratio/(count_q);
+            }
+            fprintf(out_file, "%f %f %f %f %f\n",
+                    avr_q_time,
+                    avr_u_time,
+                    avr_time,
+                    avr_ratio,
+                    max_ratio);
+            count_q=0; sum_ratio=0.; max_ratio=0.;
+            t_sum_q = std::chrono::milliseconds::zero();
+        }
     }
 }
 
@@ -289,18 +388,47 @@ void run_LL_SL_queries(FILE *out_file, T &oracle, vector<tuple<int, int, int, fl
         }
     }
     size_t count=0;
+    int count_q=0,count_u=0;
+    float sum_ratio=0., max_ratio=0.;
+    W d_got,d_exp;
+    std::chrono::duration<double, std::milli> time;
+    std::chrono::duration<double, std::milli> t_sum_q = std::chrono::milliseconds::zero(),
+                                              t_sum_u = std::chrono::milliseconds::zero();
+
     for (auto &q: queries) {
         // For each query there are 5 numbers printed out: type of query, oracle answer, solution, time in miliseconds, estimated memory usage
         if (get<0>(q) == 2) {
-            run_query2(out_file, oracle, q);
+            tie(d_got, d_exp, time)=run_query2(oracle, q);
+            if(d_exp == 0) d_exp=0.00000001;
+            sum_ratio+=d_got/d_exp; max_ratio=max(max_ratio,d_got/d_exp);
+            count_q++; t_sum_q+=time;
         } else if (get<0>(q) == 3) {
-            run_query3(out_file, oracle, q);
+            time=run_query3(oracle, q);
+            count_u++; t_sum_u+=time;
         } else {
             fprintf(stderr, "Error, bad query type ?\n");
             exit(1);
         }
         count++;
-        if (count%sample_size==0) fprintf(out_file, "%ld\n", get_mem_usage());
+        if (count%sample_size==0) {
+           // fprintf(out_file, "%ld\n", get_mem_usage());
+            float avr_q_time=0.; float avr_u_time=0.; float avr_time=0.; float avr_ratio=0.;
+            if(count_q > 0) avr_q_time=t_sum_q.count()/count_q;
+            if(count_u > 0) avr_u_time=t_sum_u.count()/count_u;
+            if(count_u+count_q > 0) {
+                avr_time=(t_sum_q.count()+t_sum_u.count())/(count_u+count_q);
+                avr_ratio=sum_ratio/(count_u+count_q);
+            }
+            fprintf(out_file, "%f %f %f %f %f\n",
+                    avr_q_time,
+                    avr_u_time,
+                    avr_time,
+                    avr_ratio,
+                    max_ratio);
+            count_q=0; count_u=0; sum_ratio=0.; max_ratio=0.;
+            t_sum_q = std::chrono::milliseconds::zero();
+            t_sum_u = std::chrono::milliseconds::zero();
+        }
     }
 }
 
@@ -315,20 +443,53 @@ void run_VV_VL_SL_queries(FILE *out_file, T &oracle, vector<tuple<int, int, int,
         }
     }
     size_t count=0;
+    int count_q=0,count_u=0;
+    float sum_ratio=0., max_ratio=0.;
+    W d_got,d_exp;
+    std::chrono::duration<double, std::milli> time;
+    std::chrono::duration<double, std::milli> t_sum_q = std::chrono::milliseconds::zero(),
+                                              t_sum_u = std::chrono::milliseconds::zero();
+
+
     for (auto &q: queries) {
         // For each query there are 5 numbers printed out: type of query, oracle answer, solution, time in miliseconds, estimated memory usage
         if (get<0>(q) == 0) {
-            run_query0(out_file, oracle, q);
+            tie(d_got, d_exp, time)=run_query0(oracle, q);
+            if(d_exp == 0) d_exp=0.00000001;
+            sum_ratio+=d_got/d_exp; max_ratio=max(max_ratio,d_got/d_exp);
+            count_q++; t_sum_q+=time;
         } else if (get<0>(q) == 1) {
-            run_query1(out_file, oracle, q);
+            tie(d_got, d_exp, time)=run_query1(oracle, q);
+            if(d_exp == 0) d_exp=0.00000001;
+            sum_ratio+=d_got/d_exp; max_ratio=max(max_ratio,d_got/d_exp);
+            count_q++; t_sum_q+=time;
         } else if (get<0>(q) == 3) {
-            run_query3(out_file, oracle, q);
+            time=run_query3(oracle, q);
+            count_u++; t_sum_u+=time;
         } else {
             fprintf(stderr, "Error, bad query type ?\n");
             exit(1);
         }
         count++;
-        if (count%sample_size==0) fprintf(out_file, "%ld\n", get_mem_usage());
+        if (count%sample_size==0) {
+            //fprintf(out_file, "%ld\n", get_mem_usage());
+            float avr_q_time=0.; float avr_u_time=0.; float avr_time=0.; float avr_ratio=0.;
+            if(count_q > 0) avr_q_time=t_sum_q.count()/count_q;
+            if(count_u > 0) avr_u_time=t_sum_u.count()/count_u;
+            if(count_u+count_q > 0) {
+                avr_time=(t_sum_q.count()+t_sum_u.count())/(count_u+count_q);
+                avr_ratio=sum_ratio/(count_u+count_q);
+            }
+            fprintf(out_file, "%f %f %f %f %f\n",
+                    avr_q_time,
+                    avr_u_time,
+                    avr_time,
+                    avr_ratio,
+                    max_ratio);
+            count_q=0; count_u=0; sum_ratio=0.; max_ratio=0.;
+            t_sum_q = std::chrono::milliseconds::zero();
+            t_sum_u = std::chrono::milliseconds::zero();
+        }
     }
 }
 
@@ -343,20 +504,53 @@ void run_VL_LL_SL_queries(FILE *out_file, T &oracle, vector<tuple<int, int, int,
         }
     }
     size_t count=0;
+    int count_q=0,count_u=0;
+    float sum_ratio=0., max_ratio=0.;
+    W d_got,d_exp;
+    std::chrono::duration<double, std::milli> time;
+    std::chrono::duration<double, std::milli> t_sum_q = std::chrono::milliseconds::zero(),
+                                              t_sum_u = std::chrono::milliseconds::zero();
+
+
     for (auto &q: queries) {
         // For each query there are 5 numbers printed out: type of query, oracle answer, solution, time in miliseconds, estimated memory usage
         if (get<0>(q) == 1) {
-            run_query1(out_file, oracle, q);
+            tie(d_got, d_exp, time)=run_query1(oracle, q);
+            if(d_exp == 0) d_exp=0.00000001;
+            sum_ratio+=d_got/d_exp; max_ratio=max(max_ratio,d_got/d_exp);
+            count_q++; t_sum_q+=time;
         } else if (get<0>(q) == 2) {
-            run_query2(out_file, oracle, q);
+            tie(d_got, d_exp, time)=run_query2(oracle, q);
+            if(d_exp == 0) d_exp=0.00000001;
+            sum_ratio+=d_got/d_exp; max_ratio=max(max_ratio,d_got/d_exp);
+            count_q++; t_sum_q+=time;
         } else if (get<0>(q) == 3) {
-            run_query3(out_file, oracle, q);
+            time=run_query3(out_file, oracle, q);
+            count_u++; t_sum_u+=time;
         } else {
             fprintf(stderr, "Error, bad query type ?\n");
             exit(1);
         }
         count++;
-        if (count%sample_size==0) fprintf(out_file, "%ld\n", get_mem_usage());
+        if (count%sample_size==0) {
+            //fprintf(out_file, "%ld\n", get_mem_usage());
+            float avr_q_time=0.; float avr_u_time=0.; float avr_time=0.; float avr_ratio=0.;
+            if(count_q > 0) avr_q_time=t_sum_q.count()/count_q;
+            if(count_u > 0) avr_u_time=t_sum_u.count()/count_u;
+            if(count_u+count_q > 0) {
+                avr_time=(t_sum_q.count()+t_sum_u.count())/(count_u+count_q);
+                avr_ratio=sum_ratio/(count_u+count_q);
+            }
+            fprintf(out_file, "%f %f %f %f %f\n",
+                    avr_q_time,
+                    avr_u_time,
+                    avr_time,
+                    avr_ratio,
+                    max_ratio);
+            count_q=0; count_u=0; sum_ratio=0.; max_ratio=0.;
+            t_sum_q = std::chrono::milliseconds::zero();
+            t_sum_u = std::chrono::milliseconds::zero();
+        }
     }
 }
 
@@ -371,20 +565,52 @@ void run_VV_VL_LL_queries(FILE *out_file, T &oracle, vector<tuple<int, int, int,
         }
     }
     size_t count=0;
+    int count_q=0;
+    float sum_ratio=0., max_ratio=0.;
+    W d_got,d_exp;
+    std::chrono::duration<double, std::milli> time;
+    std::chrono::duration<double, std::milli> t_sum_q = std::chrono::milliseconds::zero();
+
     for (auto &q: queries) {
         // For each query there are 5 numbers printed out: type of query, oracle answer, solution, time in miliseconds, estimated memory usage
         if (get<0>(q) == 0) {
-            run_query0(out_file, oracle, q);
+            tie(d_got, d_exp, time)=run_query0(oracle, q);
+            if(d_exp == 0) d_exp=0.00000001;
+            sum_ratio+=d_got/d_exp; max_ratio=max(max_ratio,d_got/d_exp);
+            count_q++; t_sum_q+=time;
         } else if (get<0>(q) == 1) {
-            run_query1(out_file, oracle, q);
+            tie(d_got, d_exp, time)=run_query1(oracle, q);
+            if(d_exp == 0) d_exp=0.00000001;
+            sum_ratio+=d_got/d_exp; max_ratio=max(max_ratio,d_got/d_exp);
+            count_q++; t_sum_q+=time;
         } else if (get<0>(q) == 2) {
-            run_query2(out_file, oracle, q);
+            tie(d_got, d_exp, time)=run_query2(oracle, q);
+            if(d_exp == 0) d_exp=0.00000001;
+            sum_ratio+=d_got/d_exp; max_ratio=max(max_ratio,d_got/d_exp);
+            count_q++; t_sum_q+=time;
         } else {
             fprintf(stderr, "Error, bad query type ?\n");
             exit(1);
         }
         count++;
-        if (count%sample_size==0) fprintf(out_file, "%ld\n", get_mem_usage());
+        if (count%sample_size==0) {
+            //fprintf(out_file, "%ld\n", get_mem_usage());
+            float avr_q_time=0.; float avr_u_time=0.; float avr_time=0.; float avr_ratio=0.;
+            if(count_q > 0) avr_q_time=t_sum_q.count()/count_q;
+            //if(count_u > 0) avr_u_time=t_sum_u.count()/count_u;
+            if(count_q > 0) {
+                avr_time=(t_sum_q.count())/(count_q);
+                avr_ratio=sum_ratio/(count_q);
+            }
+            fprintf(out_file, "%f %f %f %f %f\n",
+                    avr_q_time,
+                    avr_u_time,
+                    avr_time,
+                    avr_ratio,
+                    max_ratio);
+            count_q=0; sum_ratio=0.; max_ratio=0.;
+            t_sum_q = std::chrono::milliseconds::zero();
+        }
     }
 }
 
