@@ -15,24 +15,23 @@ private:
     vector<ScapegoatMap<int, int>> ver_pos_S; // maps containing positions of local vertices in heaps S for each local vertex of vertex i
 
     // sets P as defined in paper, for each label l1 and label l2 sets_P[l1][l2] -> heap containing min distances from vertices with label l1 to local vertices with label l2
-    unordered_map<int, unordered_map<int, Heap<ScapegoatMap<int, int>>>> sets_P;
-    unordered_map<int, ScapegoatMap<int, int>> ver_pos_P; // vectors containing positions of local labels in heaps P for each label
+    unordered_map<int, unordered_map<int, ScapegoatMap<pair<W, int>, int>>> sets_P;
 
     // Calculate local distances and populate S and P sets for vertex v
     void setup_local_distances_sets(int v, unordered_map<int, W> &distances) {
-        assert(sets_S[v].empty());
-        assert(ver_pos_S[v].size() == 0);
         calc_local_distances(distances, v);
 
         // Group distances by labels (construct S and P stacks)
         for (auto &p: distances) {
-            if (label[p.first] != 0 && label[p.first] != label[v]) {
+            if (label[p.first] != 0) {
                 sets_S[v][label[p.first]].insert(ver_pos_S[v], p.first, p.second);
             }
         }
         if (label[v] != 0) {
             for (auto &s: sets_S[v]) {
-                sets_P[label[v]][s.first].insert(ver_pos_P[s.first], v, s.second.top());
+                if (s.first != label[v]) {
+                    sets_P[label[v]][s.first][make_pair(s.second.top(), v)] = s.second.top_ver();
+                }
             }
         }
     }
@@ -46,62 +45,77 @@ private:
                 p.second.N[v_lbl].erase(p.second.ver_pos, v);
             }
 
-            // Clear S sets of vertex v
-            for (auto &s: sets_S[v]) {
-                sets_P[v_lbl][s.first].erase(ver_pos_P[v_lbl], s.second.top_ver());
-            }
-            sets_S[v].clear();
-            ver_pos_S[v].clear();
-
             // Remove vertex v from S sets of neighbors
             for (int u: components[neighborhood[v]]) {
                 if (u != v) {
                     if (sets_S[u][v_lbl].top_ver() == v) {
                         // Remove from P sets
-                        sets_P[label[u]][v_lbl].erase(ver_pos_P[label[u]], u);
+                        sets_P[label[u]][v_lbl].erase(make_pair(sets_S[u][v_lbl].top(), u));
                         sets_S[u][v_lbl].erase(ver_pos_S[u], v);
                         if (sets_S[u][v_lbl].size() > 0) {
-                            sets_P[label[u]][v_lbl].insert(ver_pos_P[label[u]], sets_S[u][v_lbl].top_ver(), sets_S[u][v_lbl].top());
-                        } else {
-                            sets_S[u].erase(v_lbl);
+                            sets_P[label[u]][v_lbl][make_pair(sets_S[u][v_lbl].top(), u)] = sets_S[u][v_lbl].top_ver();
                         }
-
                     } else {
                         sets_S[u][v_lbl].erase(ver_pos_S[u], v);
-                        if (sets_S[u][v_lbl].size() == 0) {
-                            sets_S[u].erase(v_lbl);
+                    }
+                    if (sets_S[u][v_lbl].size() == 0) {
+                        sets_S[u].erase(v_lbl);
+                        if (sets_P[label[u]][v_lbl].size() == 0) {
+                            sets_P[label[u]].erase(v_lbl);
                         }
                     }
                 }
             }
+
+            // Remove self from P sets
+            for (auto &s: sets_S[v]) {
+                if (s.first != v_lbl) {
+                    sets_P[v_lbl][s.first].erase(make_pair(s.second.top(), v));
+                    if (sets_P[v_lbl][s.first].size() == 0) {
+                        sets_P[v_lbl].erase(s.first);
+                    }
+                }
+            }
+            // Remove self from own set
+            sets_S[v][v_lbl].erase(ver_pos_S[v], v);
         }
         label[v] = 0;
     }
 
-    void applyLabel(int v, int l) {
+    void applyLabel(int v, int new_lbl) {
         assert(label[v] == 0);
-        if (l != 0) {
-            label[v] = l;
+        if (new_lbl != 0) {
+            label[v] = new_lbl;
 
-            // Add vertex to sets
+            // Add vertex to N sets
             for (auto &p: portals) {
-                p.second.N[l].insert(p.second.ver_pos, v, portal_distances[p.first][v]);
+                p.second.N[new_lbl].insert(p.second.ver_pos, v, portal_distances[p.first][v]);
             }
 
-
             unordered_map<int, W> distances;
-            setup_local_distances_sets(v, distances);
+            calc_local_distances(distances, v);
+
+            sets_S[v][new_lbl].insert(ver_pos_S[v], v, 0);
 
             // Add vertex v to S sets of neighbors, update P sets if needed
             for (int u: components[neighborhood[v]]) {
                 if (u != v) {
                     // Update P sets if new distance is smaller then previous top
-                    if (sets_S[u][l].top() > distances[u]) {
+                    if (label[u] != 0 && sets_S[u][new_lbl].top() > distances[u]) {
                         // Remove top from P sets
-                        sets_P[label[u]][l].erase(ver_pos_P[label[u]], u);
-                        sets_P[label[u]][l].insert(ver_pos_P[label[u]], u, distances[u]);
+                        if (sets_S[u][new_lbl].size() > 0) {
+                            sets_P[label[u]][new_lbl].erase(make_pair(sets_S[u][new_lbl].top(), u));
+                        }
+                        sets_P[label[u]][new_lbl][make_pair(distances[u], u)] = v;
                     }
-                    sets_S[u][l].insert(ver_pos_S[u], v, distances[u]);
+                    sets_S[u][new_lbl].insert(ver_pos_S[u], v, distances[u]);
+                }
+            }
+
+            // Add self to P sets
+            for (auto &s: sets_S[v]) {
+                if (s.first != label[v]) {
+                    sets_P[label[v]][s.first][make_pair(s.second.top(), v)] = s.second.top_ver();
                 }
             }
         }
@@ -188,10 +202,13 @@ public:
                     end = p.second.N[l2].top_ver();
                 }
         }
-        if (dist > sets_P[l1][l2].top()) {
-            dist = sets_P[l1][l2].top();
-            start = sets_P[l1][l2].top_ver();
-            end = sets_S[start][l2].top_ver();
+        if (sets_P[l1].count(l2) > 0) {
+            auto top = sets_P[l1][l2].top();
+            if (dist > top.first.first) {
+                dist = top.first.first;
+                start = top.first.second;
+                end = top.second;
+            }
         }
         return make_pair(dist, make_pair(start, end));
     }
