@@ -56,22 +56,21 @@ void print_help() {
                     "Options:\n"
                     "  -h           : Print this help message\n\n"
                     "  -O   int     : Select oracle to test (Required):\n"
-                    "                       0: FullPlanar\n"
-                    "                       1: FullFullPlanar\n"
-                    "                       2: StaticPlanar\n"
-                    "                       3: StaticLLPlanar\n"
-                    "                       4: 5AproxQuery\n"
-                    "                       5: 5AproxUpdate\n"
-                    "                       6: 3AproxLight\n"
-                    "                       7: 3Aprox\n"
+                    "                       0: Planar EPS=1\n"
+                    "                       1: Planar EPS=4\n"
+                    "                       2: Simple Planar EPS=1\n"
+                    "                       3: Simple Planar EPS=4\n"
+                    "                       4: Static LL Planar EPS=1\n"
+                    "                       5: Static LL Planar EPS=4\n"
+                    "                       6: 5ApproxUpdate\n"
+                    "                       7: Osrm\n"
                     "                       8: Hierarchy\n"
                     "                       9: HierarchyLight\n"
                     "                      10: HierarchyLightPath\n"
-                    "                      11: Osrm\n"
-                    "                      12: Dijkstra\n"
-                    "                      13: Astar\n"
+                    "                      11: Dijkstra\n"
+                    "                      12: Astar\n"
 
-                    "  -EPS float   : Epsilon value for planar oracles (default = 1.0)\n\n"
+                    "  -EPS float   : Epsilon value for planar oracles (default = 1.0), ignored at the moment\n\n"
                     "  -MPD float   : Minimal distances between portals for hierarchal oracles (default 0 for light, 15 for full)\n\n"
                     "  -RO  int     : Ro value for aprox oracles (default -1)\n\n"
     );
@@ -500,81 +499,102 @@ int main(int argc, char* argv[]) {
     std::chrono::duration<double, std::milli> build_time;
     switch (oracle_type) {
         case 0: {
+            EPS=1.;
             auto t1 = std::chrono::steady_clock::now();
-            FullPlanarOracle oracle(n, edges, distances, labels, EPS);
+            DynamicPlanarOracle oracle(n, edges, distances, labels, EPS);
             auto t2 = std::chrono::steady_clock::now();
             build_time = t2 - t1;
             for (size_t i = 0; i < test_paths.size(); i++) {
                 FILE *out_file = prep_test(i);
                 prep_oracle(oracle);
                 fprintf(out_file, "%d %d %lf %ld\n", sample_count, sample_size, build_time.count(), get_mem_usage());
-                run_VL_SL_queries(out_file, oracle, queries);
+                run_VV_VL_SL_queries(out_file, oracle, queries);
                 fclose(out_file);
             }
             break;
         }
 
         case 1: {
+            EPS=4.;
             auto t1 = std::chrono::steady_clock::now();
-            FullFullPlanarOracle oracle(n, edges, distances, labels, EPS);
+            DynamicPlanarOracle oracle(n, edges, distances, labels, EPS);
             auto t2 = std::chrono::steady_clock::now();
             build_time = t2 - t1;
             for (size_t i = 0; i < test_paths.size(); i++) {
                 FILE *out_file = prep_test(i);
                 prep_oracle(oracle);
                 fprintf(out_file, "%d %d %lf %ld\n", sample_count, sample_size, build_time.count(), get_mem_usage());
-                run_LL_SL_queries(out_file, oracle, queries);
+                run_VV_VL_SL_queries(out_file, oracle, queries);
                 fclose(out_file);
             }
             break;
         }
 
-        case 2: {
-            // TODO uncomment after merge
-//            auto t1 = std::chrono::steady_clock::now();
-//            StaticPlanarOracle oracle(n, edges, distances, labels, EPS);
-//            auto t2 = std::chrono::steady_clock::now();
-//            build_time = t2 - t1;
-//            for (size_t i = 0; i < test_paths.size(); i++) {
-//                FILE *out_file = prep_test(i);
-//                fprintf(out_file, "%d %d %lf %ld\n", sample_count, sample_size, build_time.count(), get_mem_usage());
-//                run_VV_VL_queries(out_fileoracle, queries);
-//                fclose(out_file);
-//            }
-            break;
-        }
-
-        case 3: {
-            // TODO uncomment after merge
-//            auto t1 = std::chrono::steady_clock::now();
-//            StaticLLPlanarOracle oracle(n, edges, distances, labels, EPS);
-//            auto t2 = std::chrono::steady_clock::now();
-//            build_time = t2 - t1;
-//            for (size_t i = 0; i < test_paths.size(); i++) {
-//                FILE *out_file = prep_test(i);
-//                fprintf(out_file, "%d %d %lf %ld\n", sample_count, sample_size, build_time.count(), get_mem_usage());
-//                run_VV_VL_LL_queries(out_file, oracle, queries);
-//                fclose(out_file);
-//            }
-            break;
-        }
-
-        case 4: {
+        case 2: {            
+            EPS=1.;
             auto t1 = std::chrono::steady_clock::now();
-            OracleGeneral5ApproxQuery oracle(n, edges, distances, labels, RO);
+            DynamicSimplePlanarOracle oracle(n, edges, distances, labels, EPS);
             auto t2 = std::chrono::steady_clock::now();
             build_time = t2 - t1;
             for (size_t i = 0; i < test_paths.size(); i++) {
                 FILE *out_file = prep_test(i);
                 prep_oracle(oracle);
                 fprintf(out_file, "%d %d %lf %ld\n", sample_count, sample_size, build_time.count(), get_mem_usage());
-                run_VL_SL_queries(out_file, oracle, queries);
+                run_VV_VL_SL_queries(out_file, oracle, queries);
+                fclose(out_file);
+            }
+            break;
+
+        }
+
+        case 3: {
+            EPS=4.;
+            auto t1 = std::chrono::steady_clock::now();
+            DynamicSimplePlanarOracle oracle(n, edges, distances, labels, EPS);
+            auto t2 = std::chrono::steady_clock::now();
+            build_time = t2 - t1;
+            for (size_t i = 0; i < test_paths.size(); i++) {
+                FILE *out_file = prep_test(i);
+                prep_oracle(oracle);
+                fprintf(out_file, "%d %d %lf %ld\n", sample_count, sample_size, build_time.count(), get_mem_usage());
+                run_VV_VL_SL_queries(out_file, oracle, queries);
+                fclose(out_file);
+            }
+            break;
+        }
+
+        case 4: {
+            EPS=1.;
+            auto t1 = std::chrono::steady_clock::now();
+            StaticLLPlanarOracle oracle(n, edges, distances, labels, EPS);
+            auto t2 = std::chrono::steady_clock::now();
+            build_time = t2 - t1;
+            for (size_t i = 0; i < test_paths.size(); i++) {
+                FILE *out_file = prep_test(i);
+                //prep_oracle(oracle);
+                fprintf(out_file, "%d %d %lf %ld\n", sample_count, sample_size, build_time.count(), get_mem_usage());
+                run_VV_VL_LL_queries(out_file, oracle, queries);
                 fclose(out_file);
             }
             break;
         }
 
         case 5: {
+            EPS=4.;
+            auto t1 = std::chrono::steady_clock::now();
+            StaticLLPlanarOracle oracle(n, edges, distances, labels, EPS);
+            auto t2 = std::chrono::steady_clock::now();
+            build_time = t2 - t1;
+            for (size_t i = 0; i < test_paths.size(); i++) {
+                FILE *out_file = prep_test(i);
+                //prep_oracle(oracle);
+                fprintf(out_file, "%d %d %lf %ld\n", sample_count, sample_size, build_time.count(), get_mem_usage());
+                run_VV_VL_LL_queries(out_file, oracle, queries);
+                fclose(out_file);
+            }
+            break;
+        }
+        case 6: {
             auto t1 = std::chrono::steady_clock::now();
             OracleGeneral5ApproxUpdate oracle(n, edges, distances, labels, RO);
             auto t2 = std::chrono::steady_clock::now();
@@ -588,32 +608,15 @@ int main(int argc, char* argv[]) {
             }
             break;
         }
-
-        case 6: {
-            auto t1 = std::chrono::steady_clock::now();
-            OracleGeneral3ApproxLight oracle(n, edges, distances, labels, RO);
-            auto t2 = std::chrono::steady_clock::now();
-            build_time = t2 - t1;
-            for (size_t i = 0; i < test_paths.size(); i++) {
-                FILE *out_file = prep_test(i);
-                prep_oracle(oracle);
-                fprintf(out_file, "%d %d %lf %ld\n", sample_count, sample_size, build_time.count(), get_mem_usage());
-                run_VL_LL_SL_queries(out_file, oracle, queries);
-                fclose(out_file);
-            }
-            break;
-        }
-
         case 7: {
             auto t1 = std::chrono::steady_clock::now();
-            OracleGeneral3Approx oracle(n, edges, distances, labels, RO);
+            OsrmOracle oracle(osrm_path, max_label, coords, labels);
             auto t2 = std::chrono::steady_clock::now();
             build_time = t2 - t1;
             for (size_t i = 0; i < test_paths.size(); i++) {
                 FILE *out_file = prep_test(i);
-                prep_oracle(oracle);
                 fprintf(out_file, "%d %d %lf %ld\n", sample_count, sample_size, build_time.count(), get_mem_usage());
-                run_VL_LL_SL_queries(out_file, oracle, queries);
+                run_VV_VL_LL_queries(out_file, oracle, queries);
                 fclose(out_file);
             }
             break;
@@ -664,21 +667,8 @@ int main(int argc, char* argv[]) {
             break;
         }
 
-        case 11: {
-            auto t1 = std::chrono::steady_clock::now();
-            OsrmOracle oracle(osrm_path, max_label, coords, labels);
-            auto t2 = std::chrono::steady_clock::now();
-            build_time = t2 - t1;
-            for (size_t i = 0; i < test_paths.size(); i++) {
-                FILE *out_file = prep_test(i);
-                fprintf(out_file, "%d %d %lf %ld\n", sample_count, sample_size, build_time.count(), get_mem_usage());
-                run_VV_VL_LL_queries(out_file, oracle, queries);
-                fclose(out_file);
-            }
-            break;
-        }
 
-        case 12: {
+        case 11: {
             auto t1 = std::chrono::steady_clock::now();
             DijkstraOracle oracle(n, m, edges, distances, labels);
             auto t2 = std::chrono::steady_clock::now();
@@ -693,7 +683,7 @@ int main(int argc, char* argv[]) {
             break;
         }
 
-        case 13: {
+        case 12: {
             auto t1 = std::chrono::steady_clock::now();
             AstarOracle oracle(n, m, max_speed, edges, distances, labels, coords);
             auto t2 = std::chrono::steady_clock::now();
