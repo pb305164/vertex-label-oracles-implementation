@@ -19,68 +19,78 @@ using std::map;
 
 
 template <class T>
-tuple<W, W, int, std::chrono::duration<double, std::milli> >  test_distanceToVertex(T &oracle, vector<pair<W, pair<int, int> > > &args)
+tuple<W, W, float, float, int, std::chrono::duration<double, std::milli> >  test_distanceToVertex(T &oracle, vector<pair<W, pair<int, int> > > &args)
 {
     std::chrono::duration<double, std::milli> t_sum = std::chrono::milliseconds::zero();
     W result;
-    W d_sum=0, d_res=0;
+    W d_sum=0, d_res=0; float d_ratio=0, max_ratio=0;
     int suc=0;
     for (auto p: args) {
         auto t1 = std::chrono::steady_clock::now();
         result = oracle.distanceToVertex(p.second.second, p.second.first);
         auto t2 = std::chrono::steady_clock::now();
         if (result != -1 && result != infinity) {
+            if(p.first==0) p.first=0.0000001;
+            d_ratio += result/p.first;
+            max_ratio = max(max_ratio, result/p.first);
             d_res += result;
             d_sum += p.first;
             t_sum += t2 - t1;
             suc++;
         }
     }
-    return make_tuple(d_sum, d_res, suc, t_sum);
+    return make_tuple(d_sum, d_res, d_ratio, max_ratio, suc, t_sum);
 }
 
 
 template <class T>
-tuple<W, W, int, std::chrono::duration<double, std::milli> > test_distanceToLabel(T &oracle, vector<pair<W, pair<int, int> > > &args)
+tuple<W, W,float, float, int, std::chrono::duration<double, std::milli> > test_distanceToLabel(T &oracle, vector<pair<W, pair<int, int> > > &args)
 {
     std::chrono::duration<double, std::milli> t_sum = std::chrono::milliseconds::zero();
     pair<W, int> result;
-    W d_sum=0, d_res=0;
+    W d_sum=0, d_res=0; float d_ratio=0, max_ratio=0;
     int suc=0;
     for (auto p: args) {
         auto t1 = std::chrono::steady_clock::now();
         result = oracle.distanceToLabel(p.second.second, p.second.first);
         auto t2 = std::chrono::steady_clock::now();
         if (result.first != -1) {
+            if(p.first==0) p.first=0.0000001;
+            d_ratio += result.first/p.first;
+            max_ratio = max(max_ratio, result.first/p.first);
             d_res += result.first;
             d_sum += p.first;
             t_sum += t2 - t1;
             suc++;
         }
     }
-    return make_tuple(d_sum, d_res, suc, t_sum);
+    return make_tuple(d_sum, d_res, d_ratio, max_ratio, suc, t_sum);
 }
 
 
 template <class T>
-tuple<W, W, int, std::chrono::duration<double, std::milli> > test_distanceBetweenLabels(T &oracle, vector<pair<W, pair<int, int> > > &args)
+tuple<W, W, float, float, int, std::chrono::duration<double, std::milli> > test_distanceBetweenLabels(T &oracle, vector<pair<W, pair<int, int> > > &args)
 {
     std::chrono::duration<double, std::milli> t_sum = std::chrono::milliseconds::zero();
     pair<W, pair<int, int> > result;
     W d_sum=0, d_res=0;
+    float d_ratio=0, max_ratio=0;
     int suc=0;
     for (auto p: args) {
         auto t1 = std::chrono::steady_clock::now();
         result = oracle.distanceBetweenLabels(p.second.second, p.second.first);
         auto t2 = std::chrono::steady_clock::now();
         if (result.first != -1) {
+            if(p.first==0) p.first=0.0000001;
+            d_ratio += result.first/p.first;
+            max_ratio = max(max_ratio, result.first/p.first);
             d_res += result.first;
             d_sum += p.first;
             t_sum += t2 - t1;
             suc++;
         }
     }
-    return make_tuple(d_sum, d_res, suc, t_sum);
+    return make_tuple(d_sum, d_res, d_ratio , max_ratio , suc, t_sum);
 }
 
 
@@ -88,14 +98,16 @@ tuple<W, W, int, std::chrono::duration<double, std::milli> > test_distanceBetwee
 template <class T>
 std::chrono::duration<double, std::milli> run_tests(
         T &oracle, vector<pair<W, pair<int, int> > > &queries,
-        tuple<W, W, int, std::chrono::duration<double, std::milli> > (test_func)(T&, vector<pair<W, pair<int, int> > >&))
+        tuple<W, W, float, float, int, std::chrono::duration<double, std::milli> > (test_func)(T&, vector<pair<W, pair<int, int> > >&))
 {
-    W d_exp, d_got;
+    W d_exp, d_got; float d_ratio, max_ratio;
     std::chrono::duration<double, std::milli> sum;
     int suc;
-    tie(d_exp, d_got, suc, sum) = test_func(oracle, queries);
+    tie(d_exp, d_got, d_ratio, max_ratio, suc, sum) = test_func(oracle, queries);
     printf("Czasy testu suma: %lf  śr: %lf  poprawnie %d/%lu\n", sum.count(), sum.count()/suc, suc, queries.size());
     printf("Wyniki nadwyżka: %f  śr nad: %f  proc nad: %f  śr dł: %f\n\n", d_got-d_exp, (d_got-d_exp)/suc, d_got/d_exp, d_exp/suc);
+    printf("Avg ratio: %f  Max ratio: %f\n\n", d_ratio/suc, max_ratio);
+
     return sum;
 }
 
@@ -186,10 +198,16 @@ int main(int argc, char* argv[]) {
 
     W EPS = 1.;
 
-    if (argc != 4 && argc != 5) {
-        fprintf(stderr, "Usage: %s osrm-file generated-graph generated-test [(int)epsilon for planar oracle (default = 1)]>\n", argv[0]);
+
+    if (argc != 5 && argc != 6) {
+        fprintf(stderr, "Usage: %s algorithm-number osrm-file generated-graph generated-test [(int)epsilon for planar oracle (default = 1)]>\n", argv[0]);
         return 1;
     }
+
+    int alg_num=atoi(argv[1]);
+    argc--;
+    argv++;
+
     // Eps in planar oracles
     if (argc == 5) EPS = stof(argv[4]);
 
@@ -201,6 +219,34 @@ int main(int argc, char* argv[]) {
     }
     read_graph(pfile, n, m, max_label, max_speed, edges, types, max_speeds, distances, labels, coords);
     fclose(pfile);
+
+    //WYPISZ ROZMIAR GRAFU I ORIENTACYJNĄ INFORMACJĘ DOT. ETYKIET
+    printf("Nodes: %lu, Edges: %lu\n", labels.size(), edges.size());
+    int zeros=0; vector<int> nozero;
+    for(int i=0; i<labels.size(); ++i) {
+        if(labels[i]==0) ++zeros;
+        else nozero.push_back(labels[i]);
+    }
+    printf("Labelled zero: %d\n",zeros);
+    sort(nozero.begin(),nozero.end());
+    int minlab=labels.size()+1;
+    int maxlab=0;
+    if(nozero.size()==0) printf("No other labels.\n");
+    else {
+        int curlab=1;
+        for(int i=1; i < nozero.size(); ++i) {
+            if(nozero[i]==nozero[i-1]) curlab++;
+            else {
+               if(minlab > curlab) minlab = curlab;
+               if(maxlab < curlab) maxlab = curlab;
+               curlab=1;
+               }
+           }
+        if(minlab > curlab) minlab = curlab;
+        if(maxlab < curlab) maxlab = curlab;
+        }
+
+    printf("Max label size: %d, Min label size: %d\n",maxlab,minlab);
 
     // Change distance to time (TODO add as program option)
     for (int i = 0; i < m; i++) {
@@ -254,179 +300,209 @@ int main(int argc, char* argv[]) {
 //    }
 
 
-    long mem_begin = get_mem_size();
-    printf("pamięć przed: %ldK\n", get_mem_size());
+    //long mem_begin = get_mem_size();
+    //printf("pamięć przed: %ldK\n", get_mem_size());
 
     std::chrono::duration<double, std::milli> build_time;
 
-
-    printf("HIERARCHY\n");
-    {
-        auto t1 = std::chrono::steady_clock::now();
-        HierarchyOracle oracle(edges, distances, labels, types);
-        auto t2 = std::chrono::steady_clock::now();
-        build_time = t2 - t1;
-        printf("Czas budowy: %lfs   pamięć: %ldK\n", build_time.count() / 1000, get_mem_size() - mem_begin);
-        run_all_tests(oracle, tests);
-        printf("pamięć po testach: %ldK\n", get_mem_size() - mem_begin);
-        printf("\n\n");
+    switch (alg_num) {
+    case 1:
+        printf("SIMPLE PLANAR, EPS=1\n");
+        {
+            auto t1 = std::chrono::steady_clock::now();
+            DynamicSimplePlanarOracle oracle(n, edges, distances, labels, EPS);
+            auto t2 = std::chrono::steady_clock::now();
+            build_time = t2 - t1;
+            printf("Czas budowy: %lfs\n", build_time.count()/1000);
+            run_all_vv_tests(oracle, tests);
+            run_all_vl_tests(oracle, tests);
+            printf("\n\n");
+        }
+        break;
+    case 2:
+        printf("SIMPLE PLANAR, EPS=4\n");
+        {
+            EPS=4.;
+            auto t1 = std::chrono::steady_clock::now();
+            DynamicSimplePlanarOracle oracle(n, edges, distances, labels, EPS);
+            auto t2 = std::chrono::steady_clock::now();
+            build_time = t2 - t1;
+            printf("Czas budowy: %lfs\n", build_time.count()/1000);
+            run_all_vv_tests(oracle, tests);
+            run_all_vl_tests(oracle, tests);
+            printf("\n\n");
+        }
+        break;
+    case 3:
+        printf("SIMPLE PLANAR, EPS=8\n");
+        {
+            EPS=8.;
+            auto t1 = std::chrono::steady_clock::now();
+            DynamicSimplePlanarOracle oracle(n, edges, distances, labels, EPS);
+            auto t2 = std::chrono::steady_clock::now();
+            build_time = t2 - t1;
+            printf("Czas budowy: %lfs\n", build_time.count()/1000);
+            run_all_vv_tests(oracle, tests);
+            run_all_vl_tests(oracle, tests);
+            printf("\n\n");
+        }
+        break;
+    case 4:
+        printf("PLANAR, EPS=1\n");
+        {
+            EPS=1.;
+            auto t1 = std::chrono::steady_clock::now();
+            DynamicPlanarOracle oracle(n, edges, distances, labels, EPS);
+            auto t2 = std::chrono::steady_clock::now();
+            build_time = t2 - t1;
+            printf("Czas budowy: %lfs\n", build_time.count()/1000);
+            run_all_vv_tests(oracle,tests);
+            run_all_vl_tests(oracle, tests);
+            printf("\n\n");
+        }
+        break;
+    case 5:
+        printf("PLANAR, EPS=4\n");
+        {
+            EPS=4.;
+            auto t1 = std::chrono::steady_clock::now();
+            DynamicPlanarOracle oracle(n, edges, distances, labels, EPS);
+            auto t2 = std::chrono::steady_clock::now();
+            build_time = t2 - t1;
+            printf("Czas budowy: %lfs\n", build_time.count()/1000);
+            run_all_vv_tests(oracle, tests);
+            run_all_vl_tests(oracle, tests);
+            printf("\n\n");
+        }
+        break;
+    case 6:
+        printf("OSRM Oracle\n");
+        {
+            auto t1 = std::chrono::steady_clock::now();
+            OsrmOracle oracle(argv[1], max_label, coords, labels);
+            auto t2 = std::chrono::steady_clock::now();
+            build_time = t2 - t1;
+            printf("Czas budowy: %lfs\n", build_time.count()/1000);
+            run_all_tests(oracle, tests);
+            printf("\n\n");
+        }
+        break;
+    case 7:
+        printf("5 APPROX QUERY\n");
+        {
+            auto t1 = std::chrono::steady_clock::now();
+            OracleGeneral5ApproxQuery oracle(n, edges, distances, labels);
+            auto t2 = std::chrono::steady_clock::now();
+            build_time = t2 - t1;
+            printf("Czas budowy: %lfs\n", build_time.count()/1000);
+            run_all_vl_tests(oracle, tests);
+            printf("\n\n");
+        }
+        break;
+    case 8:
+        printf("5 APPROX UPDATE\n");
+        {
+            auto t1 = std::chrono::steady_clock::now();
+            OracleGeneral5ApproxUpdate oracle(n, edges, distances, labels);
+            auto t2 = std::chrono::steady_clock::now();
+            build_time = t2 - t1;
+            printf("Czas budowy: %lfs\n", build_time.count()/1000);
+            run_all_vl_tests(oracle, tests);
+            printf("\n\n");
+        }
+        break;
+    case 9:
+        printf("3 APPROX LIGHT\n");
+        {
+            auto t1 = std::chrono::steady_clock::now();
+            OracleGeneral3ApproxLight oracle(n, edges, distances, labels);
+            auto t2 = std::chrono::steady_clock::now();
+            build_time = t2 - t1;
+            printf("Czas budowy: %lfs\n", build_time.count()/1000);
+            run_all_vl_tests(oracle, tests);
+            run_all_ll_tests(oracle, tests);
+            printf("\n\n");
+        }
+        break;
+    case 10:
+        printf("3 APPROX\n");
+        {
+            auto t1 = std::chrono::steady_clock::now();
+            OracleGeneral3Approx oracle(n, edges, distances, labels);
+            auto t2 = std::chrono::steady_clock::now();
+            build_time = t2 - t1;
+            printf("Czas budowy: %lfs\n", build_time.count()/1000);
+            run_all_vl_tests(oracle, tests);
+            run_all_ll_tests(oracle, tests);
+            printf("\n\n");
+        }
+        break;
+    case 11:
+        printf("ASTAR\n");
+        {
+            auto t1 = std::chrono::steady_clock::now();
+            AstarOracle oracle(n, m, max_speed, edges, distances, labels, coords);
+            auto t2 = std::chrono::steady_clock::now();
+            build_time = t2 - t1;
+            printf("Czas budowy: %lfs\n", build_time.count()/1000);
+            run_all_tests(oracle, tests);
+            printf("\n\n");
+        }
+        break;
+    case 12:
+        printf("DIJKSTRA\n");
+        {
+            auto t1 = std::chrono::steady_clock::now();
+            DijkstraOracle oracle(n, m, edges, distances, labels);
+            auto t2 = std::chrono::steady_clock::now();
+            build_time = t2 - t1;
+            printf("Czas budowy: %lfs\n", build_time.count()/1000);
+            run_all_tests(oracle, tests);
+            printf("\n\n");
+        }
+        break;
+    case 13:
+        printf("HIERARCHY\n");
+        {
+            auto t1 = std::chrono::steady_clock::now();
+            HierarchyOracle oracle(edges, distances, labels, types);
+            auto t2 = std::chrono::steady_clock::now();
+            build_time = t2 - t1;
+            printf("Czas budowy: %lfs\n", build_time.count() / 1000);
+            run_all_tests(oracle, tests);
+     //       printf("pamięć po testach: %ldK\n", get_mem_size() - mem_begin);
+            printf("\n\n");
+        }
+        break;
+    case 14:
+        printf("HIERARCHY LIGHT\n");
+        {
+            auto t1 = std::chrono::steady_clock::now();
+            HierarchyOracleLight oracle(edges, distances, labels, types);
+            auto t2 = std::chrono::steady_clock::now();
+            build_time = t2 - t1;
+            printf("Czas budowy: %lfs\n", build_time.count() / 1000);
+            run_all_vv_tests(oracle, tests);
+            run_all_vl_tests(oracle, tests);
+    //        printf("pamięć po testach: %ldK\n", get_mem_size() - mem_begin);
+            printf("\n\n");
+        }
+        break;
+    case 15:
+        printf("HIERARCHY LIGHT Path\n");
+        {
+            auto t1 = std::chrono::steady_clock::now();
+            HierarchyOracleLightPath oracle(edges, distances, labels, types);
+            auto t2 = std::chrono::steady_clock::now();
+            build_time = t2 - t1;
+            printf("Czas budowy: %lfs\n", build_time.count() / 1000);
+            run_all_vv_tests(oracle, tests);
+            run_all_vl_tests(oracle, tests);
+     //       printf("pamięć po testach: %ldK\n", get_mem_size() - mem_begin);
+            printf("\n\n");
+        }
+        break;
+    default:
+        break;
     }
-
-    printf("pamięć pomiędzy: %ldK\n", get_mem_size());
-
-    printf("HIERARCHY LIGHT\n");
-    {
-        auto t1 = std::chrono::steady_clock::now();
-        HierarchyOracleLight oracle(edges, distances, labels, types);
-        auto t2 = std::chrono::steady_clock::now();
-        build_time = t2 - t1;
-        printf("Czas budowy: %lfs   pamięć: %ldK\n", build_time.count() / 1000, get_mem_size() - mem_begin);
-        run_all_vv_tests(oracle, tests);
-        run_all_vl_tests(oracle, tests);
-        printf("pamięć po testach: %ldK\n", get_mem_size() - mem_begin);
-        printf("\n\n");
-    }
-
-   printf("pamięć pomiędzy: %ldK\n", get_mem_size());
-
-    printf("HIERARCHY LIGHT Path\n");
-    {
-        auto t1 = std::chrono::steady_clock::now();
-        HierarchyOracleLightPath oracle(edges, distances, labels, types);
-        auto t2 = std::chrono::steady_clock::now();
-        build_time = t2 - t1;
-        printf("Czas budowy: %lfs   pamięć: %ldK\n", build_time.count() / 1000, get_mem_size() - mem_begin);
-        run_all_vv_tests(oracle, tests);
-        run_all_vl_tests(oracle, tests);
-        printf("pamięć po testach: %ldK\n", get_mem_size() - mem_begin);
-        printf("\n\n");
-    }
-
-    printf("pamięć pomiędzy: %ldK\n", get_mem_size());
-
-    printf("FULL PLANAR\n");
-    {
-        auto t1 = std::chrono::steady_clock::now();
-        FullPlanarOracle oracle(n, edges, distances, labels, EPS);
-        auto t2 = std::chrono::steady_clock::now();
-        build_time = t2 - t1;
-        printf("Czas budowy: %lfs   pamięć: %ldK\n", build_time.count() / 1000, get_mem_size() - mem_begin);
-        run_all_vl_tests(oracle, tests);
-        printf("\n\n");
-    }
-
-    printf("pamięć pomiędzy: %ldK\n", get_mem_size());
-
-    printf("FULL FULL PLANAR\n");
-    {
-        auto t1 = std::chrono::steady_clock::now();
-        FullFullPlanarOracle oracle(n, edges, distances, labels, EPS);
-        auto t2 = std::chrono::steady_clock::now();
-        build_time = t2 - t1;
-        printf("Czas budowy: %lfs   pamięć: %ldK\n", build_time.count() / 1000, get_mem_size() - mem_begin);
-        run_all_ll_tests(oracle, tests);
-        printf("\n\n");
-    }
-
-    printf("pamięć pomiędzy: %ldK\n", get_mem_size());
-
-    printf("OSRM Oracle\n");
-    {
-        auto t1 = std::chrono::steady_clock::now();
-        OsrmOracle oracle(argv[1], max_label, coords, labels);
-        auto t2 = std::chrono::steady_clock::now();
-        build_time = t2 - t1;
-        printf("Czas budowy: %lfs   pamięć: %ldK\n", build_time.count() / 1000, get_mem_size() - mem_begin);
-        run_all_tests(oracle, tests);
-        printf("pamięć po testach: %ldK\n", get_mem_size() - mem_begin);
-        printf("\n\n");
-    }
-
-    printf("pamięć pomiędzy: %ldK\n", get_mem_size());
-
-    printf("5 APPROX QUERY\n");
-    {
-        auto t1 = std::chrono::steady_clock::now();
-        OracleGeneral5ApproxQuery oracle(n, edges, distances, labels);
-        auto t2 = std::chrono::steady_clock::now();
-        build_time = t2 - t1;
-        printf("Czas budowy: %lfs   pamięć: %ldK\n", build_time.count() / 1000, get_mem_size() - mem_begin);
-        run_all_vl_tests(oracle, tests);
-        printf("pamięć po testach: %ldK\n", get_mem_size() - mem_begin);
-        printf("\n\n");
-    }
-
-    printf("pamięć pomiędzy: %ldK\n", get_mem_size());
-
-    printf("5 APPROX UPDATE\n");
-    {
-        auto t1 = std::chrono::steady_clock::now();
-        OracleGeneral5ApproxUpdate oracle(n, edges, distances, labels);
-        auto t2 = std::chrono::steady_clock::now();
-        build_time = t2 - t1;
-        printf("Czas budowy: %lfs   pamięć: %ldK\n", build_time.count() / 1000, get_mem_size() - mem_begin);
-        run_all_vl_tests(oracle, tests);
-        printf("pamięć po testach: %ldK\n", get_mem_size() - mem_begin);
-        printf("\n\n");
-    }
-
-    printf("pamięć pomiędzy: %ldK\n", get_mem_size());
-
-    printf("3 APPROX LIGHT\n");
-    {
-        auto t1 = std::chrono::steady_clock::now();
-        OracleGeneral3ApproxLight oracle(n, edges, distances, labels);
-        auto t2 = std::chrono::steady_clock::now();
-        build_time = t2 - t1;
-        printf("Czas budowy: %lfs   pamięć: %ldK\n", build_time.count() / 1000, get_mem_size() - mem_begin);
-        run_all_vl_tests(oracle, tests);
-        run_all_ll_tests(oracle, tests);
-         printf("pamięć po testach: %ldK\n", get_mem_size() - mem_begin);
-        printf("\n\n");
-    }
-
-    printf("pamięć pomiędzy: %ldK\n", get_mem_size());
-
-    printf("3 APPROX\n");
-    {
-        auto t1 = std::chrono::steady_clock::now();
-        OracleGeneral3Approx oracle(n, edges, distances, labels);
-        auto t2 = std::chrono::steady_clock::now();
-        build_time = t2 - t1;
-        printf("Czas budowy: %lfs   pamięć: %ldK\n", build_time.count() / 1000, get_mem_size() - mem_begin);
-        run_all_vl_tests(oracle, tests);
-        run_all_ll_tests(oracle, tests);
-        printf("pamięć po testach: %ldK\n", get_mem_size() - mem_begin);
-        printf("\n\n");
-    }
-
-    printf("pamięć pomiędzy: %ldK\n", get_mem_size());
-
-    printf("ASTAR\n");
-    {
-        auto t1 = std::chrono::steady_clock::now();
-        AstarOracle oracle(n, m, max_speed, edges, distances, labels, coords);
-        auto t2 = std::chrono::steady_clock::now();
-        build_time = t2 - t1;
-        printf("Czas budowy: %lfs   pamięć: %ldK\n", build_time.count() / 1000, get_mem_size() - mem_begin);
-        run_all_tests(oracle, tests);
-        printf("pamięć po testach: %ldK\n", get_mem_size() - mem_begin);
-        printf("\n\n");
-    }
-
-    printf("pamięć pomiędzy: %ldK\n", get_mem_size());
-
-    printf("DIJKSTRA\n");
-    {
-        auto t1 = std::chrono::steady_clock::now();
-        DijkstraOracle oracle(n, m, edges, distances, labels);
-        auto t2 = std::chrono::steady_clock::now();
-        build_time = t2 - t1;
-        printf("Czas budowy: %lfs   pamięć: %ldK\n", build_time.count() / 1000, get_mem_size() - mem_begin);
-        run_all_tests(oracle, tests);
-        printf("pamięć po testach: %ldK\n", get_mem_size() - mem_begin);
-        printf("\n\n");
-    }
-    printf("pamięć: %ldK\n", get_mem_size());
-
 }

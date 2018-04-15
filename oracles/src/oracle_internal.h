@@ -12,6 +12,13 @@ getDistances(
         int u,
         vector<W> &distances);
 
+void
+getDistParents(
+        const PlanarGraph& g,
+        int u,
+        vector<W> &dist,
+        vector<int> &parents);
+
 pair<W, W>
 getStretch(const PlanarGraph& g);
 
