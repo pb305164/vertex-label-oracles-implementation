@@ -444,7 +444,7 @@ void run_VV_VL_SL_queries(FILE *out_file, T &oracle, vector<tuple<int, int, int,
     }
     size_t count=0;
     int count_q=0,count_u=0;
-    float sum_ratio=0., max_ratio=0.;
+    float sum_ratio=0., max_ratio=0.; float max_ratio_dist=0.;
     W d_got,d_exp;
     std::chrono::duration<double, std::milli> time;
     std::chrono::duration<double, std::milli> t_sum_q = std::chrono::milliseconds::zero(),
@@ -456,12 +456,20 @@ void run_VV_VL_SL_queries(FILE *out_file, T &oracle, vector<tuple<int, int, int,
         if (get<0>(q) == 0) {
             tie(d_got, d_exp, time)=run_query0(oracle, q);
             if(d_exp == 0) d_exp=0.00000001;
-            sum_ratio+=d_got/d_exp; max_ratio=max(max_ratio,d_got/d_exp);
+            sum_ratio+=d_got/d_exp;
+            if(max_ratio < d_got/d_exp) {
+                max_ratio=max(max_ratio,d_got/d_exp);
+                max_ratio_dist=d_exp;
+            }
             count_q++; t_sum_q+=time;
         } else if (get<0>(q) == 1) {
             tie(d_got, d_exp, time)=run_query1(oracle, q);
             if(d_exp == 0) d_exp=0.00000001;
-            sum_ratio+=d_got/d_exp; max_ratio=max(max_ratio,d_got/d_exp);
+            sum_ratio+=d_got/d_exp;
+            if(max_ratio < d_got/d_exp) {
+                max_ratio=max(max_ratio,d_got/d_exp);
+                max_ratio_dist=d_exp;
+            }
             count_q++; t_sum_q+=time;
         } else if (get<0>(q) == 3) {
             time=run_query3(oracle, q);
@@ -480,7 +488,7 @@ void run_VV_VL_SL_queries(FILE *out_file, T &oracle, vector<tuple<int, int, int,
                 avr_time=(t_sum_q.count()+t_sum_u.count())/(count_u+count_q);
                 avr_ratio=sum_ratio/(count_u+count_q);
             }
-            fprintf(out_file, "%f %f %f %f %f\n",
+            fprintf(out_file, "%f %f %f %f %f %f\n",
                     avr_q_time,
                     avr_u_time,
                     avr_time,
