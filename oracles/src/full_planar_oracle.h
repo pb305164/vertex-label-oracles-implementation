@@ -7,6 +7,8 @@
 #include <iostream>
 using namespace std;
 
+#define NDEBUG 1
+
 const int forb_lab=0;
 
 class FullPlanarOracle : public PlanarOracle {
@@ -364,23 +366,20 @@ public:
 
         for(int i=0; i<n; ++i)
             if(llabels[i]!=forb_lab) applyLabel(i,llabels[i]);
-    long long sump = 0, sumrp=0, sumdist=0;
-        for (auto &v: vertices) {
-        sump += (int)v.portals.size();
-        sumrp +=(int)v.rportals.size();
-        sumdist+=(int)v.dist.size();
-        }
-    cout << "Number of portals: " << (int)portals.size() << endl;
-    cout << "Avr. portals per vertex= " << sump << " / "
-             << (int)vertices.size() << " = " << (float)sump/vertices.size() << endl;
-    cout << "Avr. r-portals per vertex= " << sumrp << " / "
-             << (int)vertices.size() << " = " << (float)sumrp/vertices.size() << endl;
-    cout << "Avr. piece dists per vertex= " << sumdist << " / "
-             << (int)vertices.size() << " = " << (float)sumdist/vertices.size() << endl;
+    //long long sump = 0, sumrp=0, sumdist=0;
+    //    for (auto &v: vertices) {
+    //    sump += (int)v.portals.size();
+    //    sumrp +=(int)v.rportals.size();
+    //    sumdist+=(int)v.dist.size();
+    //    }
+    //cout << "Number of portals: " << (int)portals.size() << endl;
+    //cout << "Avr. portals per vertex= " << sump << " / "
+    //         << (int)vertices.size() << " = " << (float)sump/vertices.size() << endl;
+    //cout << "Avr. r-portals per vertex= " << sumrp << " / "
+    //         << (int)vertices.size() << " = " << (float)sumrp/vertices.size() << endl;
+    //cout << "Avr. piece dists per vertex= " << sumdist << " / "
+    //         << (int)vertices.size() << " = " << (float)sumdist/vertices.size() << endl;
 
-    //cout << "Num of times portal no ver: " << no_ver_por << ", num no mapping: " << no_mapping << endl;
-    //cerr << sum << " / " << (int)portals.size() << " = " << (float)sum/portals.size() << endl;
-    //cerr << sum << " / " << (int)vertices.size() << " = " << (float)sum/vertices.size() << endl;
     }
 
     virtual
@@ -494,9 +493,9 @@ public:
         if( !piece_d && common_portal!=-1 ) {
             spv.push_back(v);
             int x = vr ? vertices[v].rparents[pos_portal_v] : vertices[v].parents[pos_portal_v];
-            int count=0;
+      //      int count=0;
             while( x != -1 ) {
-                assert(++count < vertices.size()+2);
+      //          assert(++count < vertices.size()+2);
                 spv.push_back(x);
                 auto it1=lower_bound(vertices[x].portals.begin(),
                                     vertices[x].portals.end(),
@@ -516,9 +515,9 @@ public:
             }
 
             spw.push_back(w); x = vertices[w].parents[pos_portal_w];
-            count = 0;
+        //    count = 0;
             while( x!= -1 ) {
-                assert(++count < vertices.size()+2);
+        //        assert(++count < vertices.size()+2);
                 spw.push_back(x);
                 auto it1=lower_bound(vertices[x].portals.begin(),
                                     vertices[x].portals.end(),
@@ -697,17 +696,17 @@ public:
 
         for(int i=0; i<n; ++i)
             if(llabels[i]!=0) applyLabel(i,llabels[i]);
-    long long sump = 0, sumdist=0;//, sumrp=0;
-        for (auto &v: vertices) {
-        sump += (int)v.portals.size();
-        //sumrp +=(int)v.rportals.size();
-        sumdist+=(int)v.dist.size();
-        }
-    cout << "Number of portals: " << (int)portals.size() << endl;
-    cout << "Avr. portals per vertex= " << sump << " / "
-             << (int)vertices.size() << " = " << (float)sump/vertices.size() << endl;
-    cout << "Avr. piece dists per vertex= " << sumdist << " / "
-             << (int)vertices.size() << " = " << (float)sumdist/vertices.size() << endl;
+    //long long sump = 0, sumdist=0;//, sumrp=0;
+    //    for (auto &v: vertices) {
+    //    sump += (int)v.portals.size();
+    //    //sumrp +=(int)v.rportals.size();
+    //    sumdist+=(int)v.dist.size();
+    //    }
+    //cout << "Number of portals: " << (int)portals.size() << endl;
+    //cout << "Avr. portals per vertex= " << sump << " / "
+    //         << (int)vertices.size() << " = " << (float)sump/vertices.size() << endl;
+    //cout << "Avr. piece dists per vertex= " << sumdist << " / "
+    //         << (int)vertices.size() << " = " << (float)sumdist/vertices.size() << endl;
 
     //cout << "Avr. r-portals per vertex= " << sumrp << " / "
     //         << (int)vertices.size() << " = " << (float)sumrp/vertices.size() << endl;
@@ -1331,13 +1330,13 @@ public:
         initialize(n, edges, weights, eps);
         initializeStructures();
 
-    long long sum = 0;
-        for (auto &v: vertices) {
-        sum += (int)v.portals.size();
-        }
-    cout << "Number of portals: " << (int)portals.size() << endl;
-    cout << "Avr. portals per vertex= " << sum << " / "
-         << (int)vertices.size() << " = " << (float)sum/vertices.size() << endl;
+    //long long sum = 0;
+    //    for (auto &v: vertices) {
+    //    sum += (int)v.portals.size();
+    //    }
+    //cout << "Number of portals: " << (int)portals.size() << endl;
+    //cout << "Avr. portals per vertex= " << sum << " / "
+    //     << (int)vertices.size() << " = " << (float)sum/vertices.size() << endl;
     }
 
     virtual
@@ -1345,7 +1344,6 @@ public:
         return vertices[v].label;
     }
 
-    // UWAGA: tu jest blad - trzeba szukac tez przez r-portale
     virtual
     W distanceToVertex(int v, int w) {
         int i=0, j=0;
@@ -1364,16 +1362,6 @@ public:
         // JEszcze szukanie w kawalku ....
         auto it=lower_bound(vertices[v].dist.begin(),vertices[v].dist.end(),make_pair(w,(W)-1));
         if (it!=vertices[v].dist.end() && it->first==w) result=min(result, it->second);
-        //for(auto &curr : vertices[v].dist)
-        //    if(curr.first==w) {
-        //        result=min(result,curr.second);
-        //        break;
-        //    }
-        //for(auto &curr : vertices[w].dist)
-        //    if(curr.first==v) {
-        //        result=min(result,curr.second);
-        //        break;
-        //    }
         return result;
     }
 

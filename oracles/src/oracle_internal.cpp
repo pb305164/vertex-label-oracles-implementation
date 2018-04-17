@@ -238,8 +238,10 @@ subdivide(
         vector< vector<int> >& parents,
         vector< vector< pair<int, int > > >& paths) {
     if (g.vs().size() <= 3) return;
-
+//    std::cout << "before triangulate. " << std::endl;
     triangulate(g);
+//    std::cout << "after triangulate. " << std::endl;
+
     int eC = 0;
     vector< vector< pair< int, int > > > eNum(g.es().size());
 
@@ -324,6 +326,7 @@ subdivide(
         }
     }
 
+
     for (int i=0; i<3; ++i) {
         vector< pair< int, int > > path;
         int v = x[i];
@@ -336,6 +339,7 @@ subdivide(
         paths.push_back(path);
     }
     vsplit[0] = -1;
+
 
     vector< int > vInd(g.vs().size(), -1);
     vector< int > eInd(g.es().size(), -1);
@@ -359,5 +363,5 @@ subdivide(
         mappings.push_back(tmpMapping);
         parents.push_back(tmpParent);
 
-    } 
+    }
 }

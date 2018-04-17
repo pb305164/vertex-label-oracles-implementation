@@ -148,25 +148,20 @@ void triangulate(PlanarGraph& pg) {
     graph_t g(pg.vs().size());
     embedding_storage_t embedding_storage(num_vertices(g));
     embedding_t embedding(embedding_storage.begin(), get(vertex_index, g));
-    
     pgToBg(pg, g);
-
     assert(boyer_myrvold_planarity_test(boyer_myrvold_params::graph = g,
             boyer_myrvold_params::embedding = embedding
             ));
-    
     make_biconnected_planar(g, embedding);
     fillEdges(pg, g);
     assert(boyer_myrvold_planarity_test(boyer_myrvold_params::graph = g,
             boyer_myrvold_params::embedding = embedding
             ));
-    
     make_maximal_planar(g, embedding);
     fillEdges(pg, g);
     assert(boyer_myrvold_planarity_test(boyer_myrvold_params::graph = g,
             boyer_myrvold_params::embedding = embedding
             ));
-
     emToPg(g, embedding, pg);
     return;
 }
