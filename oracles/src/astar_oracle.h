@@ -99,9 +99,9 @@ public:
                     dist[u] = d + p.second;
                     closed[u] = false;
                     if (h[u] == infinity) {
-                        h[u] = calc_dist(u, s);
+                        h[u] = calc_dist(u, t);
                     }
-                    open.push(make_pair(dist[u] + calc_dist(u, t), u));
+                    open.push(make_pair(dist[u] + h[u], u));
                 }
             }
         }
@@ -172,7 +172,7 @@ public:
                     closed[u] = false;
                     if (h[u] == infinity) {
                         for (int i:lbl_to_ver[l2]) {
-                            h[u] = min(h[u], calc_dist_lbl(u, i));
+                            h[u] = min(h[u], calc_dist(u, i));
                         }
                     }
                     open.push(make_pair(dist[u] + h[u], u));
