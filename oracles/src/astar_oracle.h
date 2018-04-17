@@ -81,9 +81,8 @@ public:
 
     W distanceToVertex(int s, int t) {
         vector<bool> closed(n, false);
-        vector<W> dist(n, infinity), h(n);
+        vector<W> dist(n, infinity), h(n, infinity);
         priority_queue< QEl, vector<QEl>, greater<QEl> > open;
-        for (int i=0; i<n; i++) h[i] = 0 + calc_dist(i, t);
         dist[s] = 0;
         open.push(make_pair(0, s));
         while (!open.empty()) {
@@ -99,7 +98,10 @@ public:
                 if (dist[u] > d + p.second) {
                     dist[u] = d + p.second;
                     closed[u] = false;
-                    open.push(make_pair(dist[u] + h[u], u));
+                    if (h[u] == infinity) {
+                        h[u] = calc_dist(u, s);
+                    }
+                    open.push(make_pair(dist[u] + calc_dist(u, t), u));
                 }
             }
         }
@@ -108,7 +110,7 @@ public:
 
     pair<W, int> distanceToLabel(int s, int l) {
         vector<bool> closed(n, false);
-        vector<W> dist(n, infinity), h(n, 0);
+        vector<W> dist(n, infinity), h(n, infinity);
         priority_queue< QEl, vector<QEl>, greater<QEl> > open;
         vector<int> parent(n, -1);
 
@@ -131,7 +133,9 @@ public:
                     dist[u] = d + p.second;
                     parent[u] = parent[v];
                     closed[u] = false;
-                    if (h[u] == infinity) h[u] = calc_dist(u, s);
+                    if (h[u] == infinity) {
+                        h[u] = calc_dist(u, s);
+                    }
                     open.push(make_pair(dist[u] + h[u], u));
                 }
             }
@@ -168,7 +172,7 @@ public:
                     closed[u] = false;
                     if (h[u] == infinity) {
                         for (int i:lbl_to_ver[l2]) {
-                            h[u] = min(h[u], calc_dist(u, i));
+                            h[u] = min(h[u], calc_dist_lbl(u, i));
                         }
                     }
                     open.push(make_pair(dist[u] + h[u], u));
