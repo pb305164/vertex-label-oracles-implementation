@@ -130,7 +130,7 @@ pair<float, pair<int, int> > OsrmOracle::distanceBetweenLabels(int l1, int l2) {
         for (unsigned long i=0; i < source_count; i++) {
             auto durations = full_array.values.at(i).get<json::Array>().values;
             for (unsigned long j=0; j < dest_count; j++) {
-                if (durations.at(j).is<json::Number>()) {
+                if (durations.at(j).is<json::Number>() && min_d > (float) durations.at(j).get<json::Number>().value) {
                     float d = (float) durations.at(j).get<json::Number>().value;
                     min_d = d;
                     min_s = i;
