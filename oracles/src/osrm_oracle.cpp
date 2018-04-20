@@ -92,7 +92,7 @@ pair<float, int> OsrmOracle::distanceToLabel(int s, int l) {
         float min_d = std::numeric_limits<float>::max();
         auto durations = result.values["durations"].get<json::Array>().values.at(0).get<json::Array>().values;
         for (size_t i=0; i < lbl_to_ver[l].size(); i++) {
-            if (durations.at(i).is<json::Number>()) {
+            if (durations.at(i).is<json::Number>() && min_d > (float) durations.at(i).get<json::Number>().value) {
                 float d = (float) durations.at(i).get<json::Number>().value;
                 min_d = d;
                 min_i = i;
