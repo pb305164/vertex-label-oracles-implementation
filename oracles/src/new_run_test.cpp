@@ -292,6 +292,7 @@ void run_all_queries(FILE *out_file, T &oracle, vector<tuple<int, int, int, floa
     }
 }
 
+template <class T>
 void run_not_all_queries(FILE *out_file, T &oracle, vector<tuple<int, int, int, float>> &queries)
 {
     size_t count=0;
@@ -303,7 +304,8 @@ void run_not_all_queries(FILE *out_file, T &oracle, vector<tuple<int, int, int, 
                                               t_sum_u = std::chrono::milliseconds::zero();
 
     for (auto &q: queries) {
-        if(count % 10 !=0) countinue;
+        count++;
+        if(count % 10 > 0)  continue;
         // For each query there are 5 numbers printed out: type of query, oracle answer, solution, time in miliseconds, estimated memory usage
         if (get<0>(q) == 0) {
             tie(d_got, d_exp, time) = run_query0(oracle, q);
@@ -339,7 +341,7 @@ void run_not_all_queries(FILE *out_file, T &oracle, vector<tuple<int, int, int, 
             fprintf(stderr, "Error, bad query type ?\n");
             exit(1);
         }
-        count++;
+
         if (count%sample_size==0) {
             //fprintf(out_file, "%ld\n", get_mem_usage())
             float avr_q_time=0.; float avr_u_time=0.; float avr_time=0.; float avr_ratio=0.;
@@ -1062,7 +1064,7 @@ int main(int argc, char* argv[]) {
                 FILE *out_file = prep_test(i);
                 prep_oracle(oracle);
                 fprintf(out_file, "%d %d %lf %ld\n", sample_count, sample_size, build_time.count(), get_mem_usage());
-                run_not_all_queries(out_file, oracle, queries);
+                run_all_queries(out_file, oracle, queries);
                 fclose(out_file);
             }
             break;
@@ -1077,7 +1079,7 @@ int main(int argc, char* argv[]) {
                 FILE *out_file = prep_test(i);
                 prep_oracle(oracle);
                 fprintf(out_file, "%d %d %lf %ld\n", sample_count, sample_size, build_time.count(), get_mem_usage());
-                run_not_all_queries(out_file, oracle, queries);
+                run_all_queries(out_file, oracle, queries);
                 fclose(out_file);
             }
             break;

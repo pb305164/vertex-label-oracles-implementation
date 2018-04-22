@@ -835,13 +835,16 @@ public:
     virtual
     pair<W, int> distanceToLabel(int v, int l) {
         pair<W, int> result(infinity, -1);
-        if(l==0) return result;
+        if(l==forb_lab) return result;
+        //int w;
         for (auto &p: vertices[v].portals) {
             if( portals[p.first].N_l.find(l)==portals[p.first].N_l.end() ) continue;
             auto it = portals[p.first].N_l[l].begin();
             assert (it != portals[p.first].N_l[l].end());
+            //w=it->second;
             result = min(result, make_pair(p.second + it->first, it->second));
         }
+        //if(result.first < infinity) result.first=min(result.first,distanceToVertex(v,w));
         return result;
     }
 };
