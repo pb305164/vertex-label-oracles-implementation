@@ -14,6 +14,7 @@ private:
     std::vector<int> labels;
     std::unordered_map<int, std::set<int>> lbl_to_ver;
     RoutingKit::ContractionHierarchy ch;
+    RoutingKit::ContractionHierarchyQuery ch_query;
 
 public:
     RoutingKitOracle(char *pbf_file, std::vector<int> &_labels);

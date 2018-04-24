@@ -852,6 +852,7 @@ int main(int argc, char* argv[]) {
             build_time = t2 - t1;
             for (size_t i = 0; i < test_paths.size(); i++) {
                 FILE *out_file = prep_test(i);
+                prep_oracle(oracle);
                 fprintf(out_file, "%d %d %lf %ld\n", sample_count, sample_size, build_time.count(), get_mem_usage());
                 run_all_queries(out_file, oracle, queries);
                 fclose(out_file);

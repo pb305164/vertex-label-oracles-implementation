@@ -23,18 +23,17 @@ RoutingKitOracle::RoutingKitOracle(char *pbf_file, std::vector<int> &_labels): l
             tail, graph.head,
             graph.travel_time
     );
+    ch_query = ContractionHierarchyQuery(ch);
 }
 
 
 float RoutingKitOracle::distanceToVertex(int s, int t) {
-    ContractionHierarchyQuery ch_query(ch);
     ch_query.reset().add_source(s).add_target(t).run();
     return (float)((float)ch_query.get_distance()/1000.0);
 }
 
 
 pair<float, int> RoutingKitOracle::distanceToLabel(int s, int l) {
-    ContractionHierarchyQuery ch_query(ch);
     if (lbl_to_ver[l].size() > 0) {
         ch_query.reset();
         ch_query.add_source(s);
@@ -49,7 +48,6 @@ pair<float, int> RoutingKitOracle::distanceToLabel(int s, int l) {
 
 
 pair<float, pair<int, int> > RoutingKitOracle::distanceBetweenLabels(int l1, int l2) {
-    ContractionHierarchyQuery ch_query(ch);
     if (lbl_to_ver[l1].size() > 0 && lbl_to_ver[l2].size() > 0) {
         ch_query.reset();
         for (auto &v: lbl_to_ver[l1]) {
