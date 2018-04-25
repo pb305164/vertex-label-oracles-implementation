@@ -1093,7 +1093,7 @@ int main(int argc, char* argv[]) {
                 exit(1);
             }
             auto t1 = std::chrono::steady_clock::now();
-            RoutingKitOracle oracle(pbf_path, labels);
+            RoutingKitOracle oracle(pbf_path, labels, edges, distances);
             auto t2 = std::chrono::steady_clock::now();
             build_time = t2 - t1;
             for (size_t i = 0; i < test_paths.size(); i++) {
