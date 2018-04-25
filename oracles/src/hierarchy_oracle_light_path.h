@@ -13,6 +13,25 @@ private:
 
     unordered_map<int, Portal> portals; // Used for vertex-label queries
 
+    W verify_path(std::vector<int> &path) {
+        int prev = -1;
+        W distance = 0;
+        for (auto x: path) {
+            if (prev != -1) {
+                bool has = false;
+                for (auto p: edges[prev]) {
+                    if (p.destination == (int)x) {
+                        has = true;
+                        distance += p.weight;
+                    }
+                }
+                assert(has);
+            }
+            prev = x;
+        }
+        return distance;
+    }
+
     // Calculate distances from portal p to incident neighborhoods and portals incident to those neighborhoods
     void calc_portal_distances(unordered_map<int, pair<W, int>> &distances, int p, vector<bool> &is_portal, map<int, set<int>> &portal_to_neigh, set<int> need_visit) {
         typedef pair<W, int> QEl;
@@ -344,11 +363,11 @@ public:
         int last_portal = portal_dijkstra(s, t, dist_portal, parent_portal);
 
         construct_path(dist_local, dist_portal, path, s, t, parent_local, parent_portal, last_portal);
-        assert(path.size() >= 0);
+        W got = verify_path(path);
         if (dist_local < dist_portal) {
             return dist_local;
         }
-        return dist_portal;
+        return got;
 
     }
 
@@ -364,11 +383,11 @@ public:
         int last_portal = portal_dijkstra_label(s, l, dist_portal, parent_portal, end);
 
         construct_path(dist_local, dist_portal, path, s, end, parent_local, parent_portal, last_portal);
-        assert(path.size() >= 0);
+        W got = verify_path(path);
         if (dist_local < dist_portal) {
             return make_pair(dist_local, end);
         }
-        return make_pair(dist_portal, end);
+        return make_pair(got, end);
     }
 
     void setLabel(int v, int l) {

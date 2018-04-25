@@ -10,7 +10,6 @@ using std::make_pair;
 using std::pair;
 using namespace osrm;
 
-
 EngineConfig prepareConfig(char *osrm_file, EngineConfig &config) {
     config.storage_config = {osrm_file};
     config.use_shared_memory = false;
@@ -26,16 +25,14 @@ EngineConfig prepareConfig(char *osrm_file, EngineConfig &config) {
 
 
 OsrmOracle::OsrmOracle(char *osrm_file, std::vector<pair<float, float> > &_coords, std::vector<int> &_labels):
-        osrm{(prepareConfig(osrm_file, config), config)},
-        coords(_coords.size()),
-        labels(_labels),
-        lbl_to_ver() {
-    coords.resize(_coords.size());
+        osrm{(prepareConfig(osrm_file, config), config)}, coords(_coords.size()), labels(_labels), lbl_to_ver()
+{
     for (int i=0; i < (int)labels.size(); i++) {
         if (labels[i] > 0) {
             lbl_to_ver[labels[i]].insert(i);
         }
     }
+
     NearestParameters params;
     json::Object result;
 
@@ -46,7 +43,8 @@ OsrmOracle::OsrmOracle(char *osrm_file, std::vector<pair<float, float> > &_coord
         const auto status = osrm.Nearest(params, result);
         assert(status == Status::Ok);
         auto loc = result.values["waypoints"].get<json::Array>().values.at(0).get<json::Object>().values["location"].get<json::Array>().values;
-        coords[i]= make_pair((float)loc.at(1).get<json::Number>().value, (float)loc.at(0).get<json::Number>().value);
+        std::pair<float, float> crd((float)loc.at(1).get<json::Number>().value, (float)loc.at(0).get<json::Number>().value);
+        coords[i] = crd;
     }
 }
 
@@ -55,15 +53,18 @@ float OsrmOracle::distanceToVertex(int s, int t) {
     RouteParameters params;
     params.coordinates.push_back({FloatLongitude{coords[s].second}, FloatLatitude{coords[s].first}});
     params.coordinates.push_back({FloatLongitude{coords[t].second}, FloatLatitude{coords[t].first}});
+    params.steps = true;
     json::Object result;
     const auto status = osrm.Route(params, result);
     if (status == Status::Ok) {
         float time = std::numeric_limits<float>::max();
+        std::vector<json::Value> steps;
         auto &routes = result.values["routes"].get<json::Array>();
         for (auto &json_obj: routes.values) {
             auto route = json_obj.get<json::Object>();
             if (time > (float)route.values["duration"].get<json::Number>().value) {
                 time = (float)route.values["duration"].get<json::Number>().value;
+                steps = route.values["legs"].get<json::Array>().values[0].get<json::Object>().values["steps"].get<json::Array>().values;
             }
         }
         // TODO sprawdzić czy czas jest dobrze liczony ?
