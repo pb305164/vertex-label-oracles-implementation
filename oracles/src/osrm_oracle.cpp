@@ -89,7 +89,7 @@ pair<float, int> OsrmOracle::distanceToLabel(int s, int l) {
     const auto status = osrm.Table(params, result);
     if (status == Status::Ok) {
         int min_i = -1;
-        float min_d = std::numeric_limits<float>::max();
+        float min_d = std::numeric_limits<float>::infinity();
         auto durations = result.values["durations"].get<json::Array>().values.at(0).get<json::Array>().values;
         for (size_t i=0; i < lbl_to_ver[l].size(); i++) {
             if (durations.at(i).is<json::Number>() && min_d > (float) durations.at(i).get<json::Number>().value) {
@@ -103,7 +103,7 @@ pair<float, int> OsrmOracle::distanceToLabel(int s, int l) {
             return make_pair(min_d, min_i);
         }
     }
-    return make_pair(-1, -1);
+    return make_pair(std::numeric_limits<float>::infinity(), -1);
 }
 
 
