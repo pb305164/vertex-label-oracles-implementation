@@ -12,12 +12,15 @@ class RoutingKitOracle {
 
 private:
     std::vector<int> labels;
+    std::vector<std::vector<std::pair<int, W>>> edges;
     std::unordered_map<int, std::set<int>> lbl_to_ver;
     RoutingKit::ContractionHierarchy ch;
     RoutingKit::ContractionHierarchyQuery ch_query;
 
 public:
-    RoutingKitOracle(char *pbf_file, std::vector<int> &_labels);
+    RoutingKitOracle(char *pbf_file, std::vector<int> &_labels, std::vector<std::pair<int, int>> &eedges, std::vector<W> &weights);
+
+    W verify_path(std::vector<unsigned> &path);
 
     float distanceToVertex(int s, int t);
     std::pair<float, int> distanceToLabel(int s, int l);
