@@ -71,7 +71,9 @@ pair<float, pair<int, int> > RoutingKitOracle::distanceBetweenLabels(int l1, int
             ch_query.add_target(v);
         }
         ch_query.run();
-        return make_pair((float)((float)ch_query.get_distance()/1000.0), make_pair((int)ch_query.get_used_source(), (int)ch_query.get_used_target()));
+        vector<unsigned> path = ch_query.get_node_path();
+        W got = verify_path(path);
+        return make_pair(got, make_pair((int)ch_query.get_used_source(), (int)ch_query.get_used_target()));
     }
     return make_pair(-1, make_pair(-1, -1));
 }

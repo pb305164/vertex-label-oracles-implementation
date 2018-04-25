@@ -17,10 +17,10 @@ private:
     RoutingKit::ContractionHierarchy ch;
     RoutingKit::ContractionHierarchyQuery ch_query;
 
-public:
-    RoutingKitOracle(char *pbf_file, std::vector<int> &_labels, std::vector<std::pair<int, int>> &eedges, std::vector<W> &weights);
-
     W verify_path(std::vector<unsigned> &path);
+
+public:
+    RoutingKitOracle(char *pbf_file, std::vector<int> &_labels, std::vector<std::pair<int, int>> &_edges, std::vector<W> &weights);
 
     float distanceToVertex(int s, int t);
     std::pair<float, int> distanceToLabel(int s, int l);
