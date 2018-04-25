@@ -228,7 +228,7 @@ void run_all_queries(FILE *out_file, T &oracle, vector<tuple<int, int, int, floa
     std::chrono::duration<double, std::milli> time;
     std::chrono::duration<double, std::milli> t_sum_q = std::chrono::milliseconds::zero(),
                                               t_sum_u = std::chrono::milliseconds::zero();
-
+//    fill(inter,inter+11,0); int sum=0;
     for (auto &q: queries) {
         // For each query there are 5 numbers printed out: type of query, oracle answer, solution, time in miliseconds, estimated memory usage
         if (get<0>(q) == 0) {
@@ -242,13 +242,16 @@ void run_all_queries(FILE *out_file, T &oracle, vector<tuple<int, int, int, floa
             count_q++; t_sum_q+=time;
         } else if (get<0>(q) == 1) {
             tie(d_got, d_exp, time) = run_query1(oracle, q);
+        //    int i=1; int c=0;
+        //    while(lab[get<2>(q)] > i && c < 10) { i*=2; ++c; }
+        //    inter[c]++; sum++;
             if(d_exp == 0) d_exp=0.00000001;
             sum_ratio+=d_got/d_exp;
             if(max_ratio < d_got/d_exp) {
                 max_ratio=max(max_ratio,d_got/d_exp);
                 max_ratio_dist=d_exp;
             }
-            count_q++; t_sum_q+=time;
+           count_q++; t_sum_q+=time;
         } else if (get<0>(q) == 2) {
             tie(d_got, d_exp, time) = run_query2(oracle, q);
             if(d_exp == 0) d_exp=0.00000001;
@@ -267,7 +270,6 @@ void run_all_queries(FILE *out_file, T &oracle, vector<tuple<int, int, int, floa
         }
         count++;
         if (count%sample_size==0) {
-            //fprintf(out_file, "%ld\n", get_mem_usage())
             float avr_q_time=0.; float avr_u_time=0.; float avr_time=0.; float avr_ratio=0.;
             if(count_q > 0) {
                 avr_q_time=t_sum_q.count()/count_q;
@@ -275,7 +277,7 @@ void run_all_queries(FILE *out_file, T &oracle, vector<tuple<int, int, int, floa
             }
             if(count_u > 0) avr_u_time=t_sum_u.count()/count_u;
             if(count_u+count_q > 0)
-                avr_time=(t_sum_q.count()+t_sum_u.count())/(count_u+count_q);    
+                avr_time=(t_sum_q.count()+t_sum_u.count())/(count_u+count_q);
 
             fprintf(out_file, "%f %f %f %f %f %f\n",
                     avr_q_time,
@@ -284,7 +286,10 @@ void run_all_queries(FILE *out_file, T &oracle, vector<tuple<int, int, int, floa
                     avr_ratio,
                     max_ratio,
                     max_ratio_dist);
+    //        for(int i=0; i<11; ++i) cout << inter[i] << " ";
+    //        cout << sum << endl;
             count_q=0; count_u=0; sum_ratio=0.; max_ratio=0.; max_ratio_dist=0.;
+    //        fill(inter,inter+11,0); sum=0;
             t_sum_q = std::chrono::milliseconds::zero();
             t_sum_u = std::chrono::milliseconds::zero();
         }
@@ -882,6 +887,26 @@ int main(int argc, char* argv[]) {
             distances[i] = distances[i] / max_speeds[i];
         }
     }
+
+    //WYPISZ ROZMIAR GRAFU I ORIENTACYJNĄ INFORMACJĘ DOT. ETYKIET
+    //printf("Nodes: %lu, Edges: %lu\n", labels.size(), edges.size());
+
+    //int max_labell=0;
+    //for(int i=0; i<labels.size(); ++i)
+    //    max_labell=max(max_labell,labels[i]);
+
+    //vector<int> label_counts;
+    //int lcs=max_labell+1;
+    //label_counts.resize(lcs);
+    //fill(label_counts.begin(),label_counts.end(),0);
+    //for(int i=0; i<labels.size(); ++i) {
+    //    label_counts[labels[i]]++;
+    //}
+
+    //cout <<  lcs << "labels" << endl;
+    //sort(label_counts.begin(),label_counts.end());
+    //for(int i=0; i<lcs; ++i) cout << label_counts[lcs-1-i] << ",";
+    //cout << endl;
 
     std::chrono::duration<double, std::milli> build_time;
     switch (oracle_type) {

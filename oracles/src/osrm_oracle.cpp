@@ -103,7 +103,7 @@ pair<float, int> OsrmOracle::distanceToLabel(int s, int l) {
             return make_pair(min_d, min_i);
         }
     }
-    return make_pair(std::numeric_limits<float>::infinity(), -1);
+    return make_pair(-1, -1);
 }
 
 

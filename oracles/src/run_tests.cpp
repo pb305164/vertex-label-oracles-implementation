@@ -223,10 +223,28 @@ int main(int argc, char* argv[]) {
     //WYPISZ ROZMIAR GRAFU I ORIENTACYJNĄ INFORMACJĘ DOT. ETYKIET
     printf("Nodes: %lu, Edges: %lu\n", labels.size(), edges.size());
     int zeros=0; vector<int> nozero;
+
+    int max_labell=0;
     for(int i=0; i<labels.size(); ++i) {
+        if(labels[i] > max_labell) max_labell=labels[i];
         if(labels[i]==0) ++zeros;
         else nozero.push_back(labels[i]);
     }
+
+    vector<int> label_counts;
+    int lcs=max_labell+1;
+    label_counts.resize(lcs);
+    fill(label_counts.begin(),label_counts.end(),0);
+    for(int i=0; i<labels.size(); ++i) {
+        label_counts[labels[i]]++;
+    }
+
+    cout << lcs << endl;
+    sort(label_counts.begin(),label_counts.end());
+    for(int i=0; i<lcs; ++i) cout << label_counts[lcs-1-i] << ",";
+    cout << endl;
+
+
     printf("Labelled zero: %d\n",zeros);
     sort(nozero.begin(),nozero.end());
     int minlab=labels.size()+1;
