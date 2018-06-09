@@ -156,7 +156,7 @@ int main(int argc, char* argv[])
     vector<char> types;
     vector<W> max_speeds;
     vector<W> distances;
-    vector<pair<W, W> > cords;
+    vector<pair<double, double> > cords;
     W max_speed;
     int m;
     pair<W, W> min(infinity, infinity);

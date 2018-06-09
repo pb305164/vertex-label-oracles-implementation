@@ -192,7 +192,7 @@ int main(int argc, char* argv[]) {
     vector<W> distances;
     vector<int> labels;
     W max_speed;
-    vector<pair<W, W>> coords;
+    vector<pair<double, double>> coords;
     vector<pair<W, pair<int, int> > > tests[3][3];
     int n, m, max_label;
 

@@ -24,7 +24,7 @@ EngineConfig prepareConfig(char *osrm_file, EngineConfig &config) {
 }
 
 
-OsrmOracle::OsrmOracle(char *osrm_file, std::vector<pair<float, float> > &_coords, std::vector<int> &_labels):
+OsrmOracle::OsrmOracle(char *osrm_file, std::vector<pair<double, double> > &_coords, std::vector<int> &_labels):
         osrm{(prepareConfig(osrm_file, config), config)}, coords(_coords.size()), labels(_labels), lbl_to_ver()
 {
     for (int i=0; i < (int)labels.size(); i++) {

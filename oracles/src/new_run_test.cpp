@@ -11,6 +11,7 @@
 #include "hierarchy_oracle_light.h"
 #include "hierarchy_oracle_light_path.h"
 #include "routing_kit_oracle.h"
+#include "LCAOracle.h"
 
 #include <chrono>
 
@@ -858,7 +859,7 @@ int main(int argc, char* argv[]) {
     vector<pair<int, int>> edges;
     vector<char> types;
     W max_speed;
-    vector<pair<W, W>> coords;
+    vector<pair<double, double>> coords;
 
     parse_program_options(argc, argv);
 //    printf("oracle_type: %d   EPS: %f   MPD: %f   RO: %d  osm_path: %s   graph_path: %s  test_path: %s\n",
@@ -1094,6 +1095,21 @@ int main(int argc, char* argv[]) {
             }
             auto t1 = std::chrono::steady_clock::now();
             RoutingKitOracle oracle(pbf_path, labels, edges, distances);
+            auto t2 = std::chrono::steady_clock::now();
+            build_time = t2 - t1;
+            for (size_t i = 0; i < test_paths.size(); i++) {
+                FILE *out_file = prep_test(i);
+                prep_oracle(oracle);
+                fprintf(out_file, "%d %d %lf %ld\n", sample_count, sample_size, build_time.count(), get_mem_usage());
+                run_all_queries(out_file, oracle, queries);
+                fclose(out_file);
+            }
+            break;
+        }
+
+        case 14: {
+            auto t1 = std::chrono::steady_clock::now();
+            LCAOracle oracle(edges, distances, types, labels, coords);
             auto t2 = std::chrono::steady_clock::now();
             build_time = t2 - t1;
             for (size_t i = 0; i < test_paths.size(); i++) {

@@ -48,7 +48,7 @@ private:
     int n;
     vector<vector<pair<int, W> > > edges;
     unordered_map<int, set<int>> lbl_to_ver;
-    vector<pair<W, W> > coordinates;
+    vector<pair<double, double> > coordinates;
     vector<int> labels;
     W max_speed;
 //    GeographicLib::Geodesic geodesic;
@@ -61,7 +61,7 @@ private:
     }
 
 public:
-    AstarOracle(int nn, int m, W mmax_speed, vector<pair<int, int>>& eedges, vector<W>& weights, vector<int>& llabels, vector<pair<W, W>>& cords):
+    AstarOracle(int nn, int m, W mmax_speed, vector<pair<int, int>>& eedges, vector<W>& weights, vector<int>& llabels, vector<pair<double, double>>& cords):
             n(nn), edges(nn), lbl_to_ver(), coordinates(cords), labels(llabels), max_speed(mmax_speed) //, geodesic(EARTH_RADIUS, 1/INVERSE_FLATTENING)
 
     {
