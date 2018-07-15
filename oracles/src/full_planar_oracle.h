@@ -11,61 +11,7 @@ using namespace std;
 
 const int forb_lab=0;
 
-// mozliwie najprostszy kopiec
-template<class Key>
-class Heap {
-public:
-    vector<Key> h;
 
-    Heap() {
-        h.push_back(Key());
-    }
-    int push(Key k) {
-        h.push_back(k);
-        int iter=h.size()-1;
-        while(iter > 1 && h[iter] < h[iter/2]) {
-            swap(h[iter],h[iter/2]);
-            iter /= 2;
-        }
-        return iter;
-    }
-
-    // pos >= 1, indeks w tablicy h to jednoczesnie pozycja na kopcu
-    void remove(int pos) {
-        if(h.size() < 2) return;
-        if(h.size()==2) {
-            h.pop_back();
-            return;
-        }
-        // w gore
-        while(pos > 1) {
-            h[pos]=h[pos/2];
-            pos /= 2;
-        }
-        // podmiana
-        Key temp=h[h.size()-1];
-        h.pop_back();
-        // w dol
-        int next=2*pos;
-        if(next+1 < h.size() && h[next] > h[next+1]) ++next;
-        while(next < h.size() && h[next] < temp ) {
-            h[pos]=h[next];
-            pos=next;
-            next = 2*pos;
-            if(next+1 < h.size() && h[next] > h[next+1]) ++next;
-        }
-        h[pos]=temp;
-
-    }
-
-    Key top() {
-        return h[1];
-    }
-
-    int size() {
-        return h.size()-1;
-    }
-};
 
 class FullPlanarOracle : public PlanarOracle {
     
@@ -629,10 +575,91 @@ class DynamicSimplePlanarOracle : public PlanarOracle {
         int portal_pos;   // pozycja wierzcholka na globalnej liscie portals, jesli jest on portalem, wpp -1
         vector< pair<int,W> > portals;  // portale wierzcholka: pozycja na glob. liscie portals i odleglosc
         vector< int > parents;   // kazdemu portalowi wierzcholka odpowiada rodzic na sciezce do tego portala
+        vector< int > heapPtrs;  // pusty gdy etykieta 0, wpp dla kazdego portala ptr do poz. na kopcu
         vector< pair< int, pair<W,int> > > dist;
         // lista odl. wewnatrz kawalka: identyfikator wierzch, odl. i rodzic, posortowana po id
     };
     vector< Vertex > vertices; // lista wierzcholkow
+
+    // mozliwie najprostszy kopiec
+    // niestety kopiec miesza w bebechach wyroczni, stad nie jest lepiej wydzielony
+    struct Heap {
+        // kopiec z parami (indeks wierzcholka, pozycja portalu na jego liscie)
+        struct Node {
+            int v, p_v;
+
+            Node() { v=-1; p_v=-1; }
+            Node(int vv, int pp_v): v(vv), p_v(pp_v) {}
+        };
+
+        vector< Node > h;
+
+        Heap() {
+            h.push_back(Node());  // dummy
+        }
+
+        struct Comparator {
+            vector<Vertex> &vertices;
+            Comparator(vector<Vertex>& vertices) : vertices(vertices) {}
+            bool operator()(const Node& a, const Node& b) const {
+                 return vertices[a.v].portals[a.p_v].second < vertices[b.v].portals[b.p_v].second;
+            }
+        };
+
+        int push(int v, int p_v, vector<Vertex> &vertices) {
+            Comparator less(vertices);
+            h.push_back(Node());
+            int iter=h.size()-1;
+            while(iter > 1 && less(h[iter],h[iter/2]) ) {
+                vertices[h[iter/2].v].heapPtrs[h[iter/2].p_v]=iter;
+                h[iter]=h[iter/2];
+                iter /= 2;
+            }
+            h[iter]=Node(v,p_v);
+            return iter;
+        }
+
+        // pos >= 1, indeks w tablicy h to jednoczesnie pozycja na kopcu
+        void remove(int pos, vector<Vertex> &vertices) {
+            if(h.size() < 2) return;
+            if(h.size()==2) {
+                h.pop_back();
+                return;
+            }
+            // w gore
+            while(pos > 1) {
+                vertices[h[pos/2].v].heapPtrs[h[pos/2].p_v]=pos;
+                h[pos]=h[pos/2];
+                pos /= 2;
+            }
+            // podmiana
+            Node temp=h[h.size()-1];
+            h.pop_back();
+            // w dol
+            int next=2*pos;
+            if(next+1 < h.size() && less(h[next+1],h[next]) ) ++next;
+            while(next < h.size() && less(h[next] , temp) ) {
+                vertices[h[next].v].heapPtrs[h[next].p_v]=pos;
+                h[pos]=h[next];
+                pos=next;
+                next = 2*pos;
+                if( next+1 < h.size() && less(h[next+1],h[next]) ) ++next;
+            }
+            vertices[temp.v].heapPtrs[temp.p_v]=pos;
+            h[pos]=temp;
+        }
+
+        W top(vector<Vertex> &vertices) {
+            return (vertices[h[1].v].portals[h[1].p_v]).second;
+        }
+
+        int size() {
+            return h.size()-1;
+        }
+    };
+
+
+
 
     struct Portal {
         unordered_map<int, set< pair<W, int> > > N_l; // mapa etykieta -> kopiec z wierzch. o tej etykiecie
@@ -949,6 +976,337 @@ public:
     }
 };
 
+
+// obecnie uzywana wyrocznia
+// obsluguje vertex-vertex i vertex-label
+// porzadnie wydebugowana
+// z opcją znajdywania ścieżek (funkcja distanceToVertex) lub tylko odległości (funkcja distanceToVertex1)
+class DynamicSGtSimplePlanarOracle : public PlanarOracle {
+
+    struct Vertex {
+        int label;
+        int portal_pos;   // pozycja wierzcholka na globalnej liscie portals, jesli jest on portalem, wpp -1
+        vector< pair<int,W> > portals;  // portale wierzcholka: pozycja na glob. liscie portals i odleglosc
+        vector< int > parents;   // kazdemu portalowi wierzcholka odpowiada rodzic na sciezce do tego portala
+        vector< pair< int, pair<W,int> > > dist;
+        // lista odl. wewnatrz kawalka: identyfikator wierzch, odl. i rodzic, posortowana po id
+    };
+    vector< Vertex > vertices; // lista wierzcholkow
+
+    struct Portal {
+        unordered_map<int, set< pair<W, int> > > N_l; // mapa etykieta -> kopiec z wierzch. o tej etykiecie
+        Portal() {}
+    };
+    vector< Portal > portals; // globalna lista portali
+
+    //flagi
+    bool noProcessLeaf;   // bez odleglosci wewn. kawalka
+
+    virtual
+    void processLeaf(
+            const PlanarGraph& pg,
+            const vector<int>& mapping,
+            const vector<bool>& source) {
+        if(!noProcessLeaf) {
+            vector<W> distances;
+            vector<int> parents;
+            for (int v=0; v<(int)pg.vs().size(); ++v) {
+                int vv = mapping[v];   // odzyskanie globalnego indeksu wierzcholka v z kawalka pg
+                if (vv == -1) continue;   // czy to sie w ogole zdarza ??
+
+                // Dijkstra z v po pg
+                getDistParents(pg, v, distances,parents);
+
+                for (int u=0; u<(int)pg.vs().size(); ++u) {
+                    int uu = mapping[u];
+                    if (uu == -1) continue;
+                    if (distances[u] == infinity) continue;
+                    if(u==v) continue;
+
+                    // szukamy czy vv jest uwzgledniony w liscie dist wierzch. uu
+                    auto it=lower_bound(
+                            vertices[uu].dist.begin(),
+                            vertices[uu].dist.end(),
+                            make_pair(vv, make_pair((W)-1,-2))
+                            );
+
+                    // jesli nie jest, to go wstawiamy w odpowiednie miejsce na liscie dist
+                    if(it==vertices[uu].dist.end() || it->first != vv )
+                        vertices[uu].dist.insert(
+                                it,
+                                make_pair(
+                                    vv,
+                                    make_pair(
+                                        distances[u],
+                                        mapping[parents[u]]
+                                    )
+                                )
+                            );
+                    else
+                    // wpp. poprawiamy odleglosc i rodzica
+                        if((it->second).first > distances[u]) {
+                            (it->second).first=distances[u];
+                            (it->second).second=mapping[parents[u]];
+                        }
+                }
+            }
+
+        }
+
+    }
+
+    virtual
+    void processPortals(
+            const PlanarGraph& pg,
+            const vector<int>& mapping,
+            const vector<int>& newPortals,
+            const vector<bool>& source) {
+
+        vector<W> distances; vector<int> parents;
+        int pos;
+        for (int p: newPortals) {
+            getDistParents(pg, p, distances, parents);
+
+            if( mapping[p]==-1 || vertices[mapping[p]].portal_pos==-1 ) {
+               portals.push_back(Portal());
+               pos=portals.size()-1;
+               if(mapping[p]!=-1) vertices[mapping[p]].portal_pos=pos;
+            }
+            else pos=vertices[mapping[p]].portal_pos;
+
+            for (int j=0; j<(int)mapping.size(); ++j) {
+                int v = mapping[j];
+                if (v == -1) continue;
+                if (distances[j] == infinity) continue;
+
+                int par=-1;
+                if(j!=p) {
+                    //assert(parents[j]!=-1);
+                    par=mapping[parents[j]];
+                }
+
+                auto it1=lower_bound( vertices[v].portals.begin(),
+                                      vertices[v].portals.end(),
+                                      make_pair(pos,(W)-1));
+                bool is_portal=false;
+                if(it1 != vertices[v].portals.end() && it1->first == pos) is_portal=true;
+
+                if( ! is_portal ) {
+                   auto itp=vertices[v].parents.begin()+(it1-vertices[v].portals.begin());
+                   vertices[v].portals.insert(it1,make_pair(pos,distances[j]));
+                   vertices[v].parents.insert(itp, par);
+                }
+                else
+                    if(distances[j] < it1->second) {
+                        it1->second=distances[j];
+                        vertices[v].parents[it1-vertices[v].portals.begin()]=par;
+                    }
+
+            }
+        }
+    }
+
+    virtual
+    void applyLabel(int v, int l) {
+        vertices[v].label = l;
+        for (auto &p: vertices[v].portals) {
+            portals[p.first].N_l[l].insert(make_pair(p.second, v));
+        }
+    }
+
+    virtual
+    void purgeLabel(int v) {
+        int l = vertices[v].label;
+
+        for (auto &p: vertices[v].portals) {
+            auto it = portals[p.first].N_l.find(l);
+            if(it!=portals[p.first].N_l.end()) {
+                it->second.erase(make_pair(p.second, v));
+                if (it->second.empty()) {
+                    portals[p.first].N_l.erase(it);
+                }
+            }
+        }
+    }
+
+public:
+    DynamicSGtSimplePlanarOracle(
+            int n,
+            const vector< pair< int, int > >& edges,
+            const vector< W >& weights,
+            const vector< int > llabels,
+            W eps = 1.,
+            bool noLeaf = false,
+            int jump = 2) {
+
+        noProcessLeaf = noLeaf;
+        ro = min(n, 3);
+        vertices = vector<Vertex>(n);
+        for (int i=0; i<n; ++i) vertices[i].portal_pos = -1;
+
+        initialize(n, edges, weights, eps, jump);
+
+        for(int i=0; i<n; ++i)
+            if(llabels[i]!=forb_lab) applyLabel(i,llabels[i]);
+    //long long sump = 0, sumdist=0;//, sumrp=0;
+    //    for (auto &v: vertices) {
+    //    sump += (int)v.portals.size();
+    //    //sumrp +=(int)v.rportals.size();
+    //    sumdist+=(int)v.dist.size();
+    //    }
+    //cout << "Number of portals: " << (int)portals.size() << endl;
+    //cout << "Avr. portals per vertex= " << sump << " / "
+    //         << (int)vertices.size() << " = " << (float)sump/vertices.size() << endl;
+    //cout << "Avr. piece dists per vertex= " << sumdist << " / "
+    //         << (int)vertices.size() << " = " << (float)sumdist/vertices.size() << endl;
+
+    //cout << "Avr. r-portals per vertex= " << sumrp << " / "
+    //         << (int)vertices.size() << " = " << (float)sumrp/vertices.size() << endl;
+
+    //cout << "Num of times portal no ver: " << no_ver_por << ", num no mapping: " << no_mapping << endl;
+    //cerr << sum << " / " << (int)portals.size() << " = " << (float)sum/portals.size() << endl;
+    //cerr << sum << " / " << (int)vertices.size() << " = " << (float)sum/vertices.size() << endl;
+    }
+
+    virtual
+    int labelOf(int v) {
+        return vertices[v].label;
+    }
+
+    virtual
+    void setLabel(int v, int l) {
+        purgeLabel(v);
+        if(l!=forb_lab) applyLabel(v, l);
+    }
+
+    virtual
+    W distanceToVertex1(int v, int w) {
+        int i=0, j=0;
+        W result=infinity;
+
+        while( i < vertices[v].portals.size() && j < vertices[w].portals.size() ) {
+            if( vertices[v].portals[i].first == vertices[w].portals[j].first ) {
+                result=min(result, vertices[v].portals[i].second+vertices[w].portals[j].second);
+                ++i; ++j;
+            }
+            else {
+                if(vertices[v].portals[i].first < vertices[w].portals[j].first) ++i;
+                else ++j;
+            }
+        }
+
+        auto it=lower_bound(vertices[w].dist.begin(),vertices[w].dist.end(),make_pair(v,make_pair((W)-1,-2)));
+        if(it!=vertices[w].dist.end() && it->first==v) {
+            if( result > (it->second).first ) {
+                result = (it->second).first;
+            }
+        }
+
+        return result;
+    }
+
+    virtual
+    W distanceToVertex(int v, int w) {
+        if(v==w) return 0;
+        vector<int> spv, spw;
+        int i=0, j=0, common_portal=-1, pos_portal_v, pos_portal_w;
+        W result=infinity;
+
+        while( i < vertices[v].portals.size() && j < vertices[w].portals.size() ) {
+            if( vertices[v].portals[i].first == vertices[w].portals[j].first ) {
+                W dist=vertices[v].portals[i].second+vertices[w].portals[j].second;
+                if(result > dist) {
+                    result=dist;
+                    //pos_portal_v=i;
+                    //pos_portal_w=j;
+                    common_portal=vertices[v].portals[i].first;
+                }
+                ++i; ++j;
+            }
+            else {
+                if(vertices[v].portals[i].first < vertices[w].portals[j].first) ++i;
+                else ++j;
+            }
+        }
+
+        bool piece_d=false;
+        if(!noProcessLeaf) {
+            auto it=lower_bound(vertices[w].dist.begin(),vertices[w].dist.end(),make_pair(v,make_pair((W)-1,-2)));
+            if(it!=vertices[w].dist.end() && it->first==v) {
+                if( result > (it->second).first ) {
+                    result = (it->second).first;
+                    piece_d=true;
+                    int x=(it->second).second;
+                    while(x != v) {
+                        auto itn=lower_bound(vertices[x].dist.begin(),vertices[x].dist.end(),make_pair(v,make_pair((W)-1,-2)));
+                        assert(itn!=vertices[x].dist.end() && itn->first==v);
+                        x=(itn->second).second;
+                    }
+                }
+            }
+        }
+
+        if(!piece_d && common_portal!=-1) {
+            auto itv=lower_bound(vertices[v].portals.begin(),vertices[v].portals.end(),make_pair(common_portal,(W)-1));
+            auto itw=lower_bound(vertices[v].portals.begin(),vertices[v].portals.end(),make_pair(common_portal,(W)-1));
+            pos_portal_v=itv-vertices[v].portals.begin();
+            pos_portal_w=itw-vertices[w].portals.begin();
+
+            spv.push_back(v); int x = vertices[v].parents[pos_portal_v];
+            //int count=0;
+            int pos_por;
+            while( x != -1 ) {
+                //++count;
+                //assert(count < vertices.size());
+                auto it1=lower_bound(vertices[x].portals.begin(),
+                                    vertices[x].portals.end(),
+                                    make_pair(common_portal,(W)-1));
+                //assert(it1 != vertices[x].portals.end() && it1->first == common_portal);
+                pos_por = it1-vertices[x].portals.begin();
+
+                spv.push_back(x);
+                x = vertices[x].parents[pos_por];
+            }
+
+            //count=0;
+            spv.push_back(w); x = vertices[w].parents[pos_portal_w];
+            while( x!= -1 ) {
+                //++count;
+                //assert(count < vertices.size());
+                auto it1=lower_bound(vertices[x].portals.begin(),
+                                    vertices[x].portals.end(),
+                                    make_pair(common_portal,(W)-1));
+                //assert(it1 != vertices[x].portals.end() && it1->first == common_portal);
+                pos_por = it1-vertices[x].portals.begin();
+
+                spw.push_back(x);
+                x = vertices[x].parents[pos_por];
+            }
+
+            // tu trzeba wykopac podwojna kopie wspolnego portala
+            //reverse(spw.begin(),spw.end());
+            //spv.pop_back();
+            //spv.insert(spv.end(),spw.begin(),spw.end());
+        }
+        return result;
+    }
+
+    virtual
+    pair<W, int> distanceToLabel(int v, int l) {
+        pair<W, int> result(infinity, -1);
+        if(l==forb_lab) return result;
+        //int w;
+        for (auto &p: vertices[v].portals) {
+            if( portals[p.first].N_l.find(l)==portals[p.first].N_l.end() ) continue;
+            auto it = portals[p.first].N_l[l].begin();
+            assert (it != portals[p.first].N_l[l].end());
+            //w=it->second;
+            result = min(result, make_pair(p.second + it->first, it->second));
+        }
+        //if(result.first < infinity) result.first=min(result.first,distanceToVertex(v,w));
+        return result;
+    }
+};
 
 class StaticPlanarOracle : public PlanarOracle {
 
