@@ -230,7 +230,8 @@ void run_all_queries(FILE *out_file, T &oracle, vector<tuple<int, int, int, floa
                                               t_sum_u = std::chrono::milliseconds::zero();
 //    fill(inter,inter+11,0); int sum=0;
     for (auto &q: queries) {
-        // For each query there are 5 numbers printed out: type of query, oracle answer, solution, time in miliseconds, estimated memory usage
+        // For each query there are 5 numbers printed out:
+        // type of query, oracle answer, solution, time in miliseconds, estimated memory usage
         if (get<0>(q) == 0) {
             tie(d_got, d_exp, time) = run_query0(oracle, q);
             if(d_exp == 0) d_exp=0.00000001;
@@ -293,7 +294,6 @@ void run_all_queries(FILE *out_file, T &oracle, vector<tuple<int, int, int, floa
             t_sum_q = std::chrono::milliseconds::zero();
             t_sum_u = std::chrono::milliseconds::zero();
         }
-
     }
 }
 
@@ -913,7 +913,7 @@ int main(int argc, char* argv[]) {
         case 0: {
             EPS=1.;
             auto t1 = std::chrono::steady_clock::now();
-            DynamicPlanarOracle oracle(n, edges, distances, labels, EPS);
+            DynamicSimplePlanarOracle oracle(n, edges, distances, labels, EPS, 2, false);
             auto t2 = std::chrono::steady_clock::now();
             build_time = t2 - t1;
             for (size_t i = 0; i < test_paths.size(); i++) {
@@ -929,7 +929,7 @@ int main(int argc, char* argv[]) {
         case 1: {
             EPS=4.;
             auto t1 = std::chrono::steady_clock::now();
-            DynamicPlanarOracle oracle(n, edges, distances, labels, EPS);
+            DynamicSimplePlanarOracle oracle(n, edges, distances, labels, EPS, 2, false);
             auto t2 = std::chrono::steady_clock::now();
             build_time = t2 - t1;
             for (size_t i = 0; i < test_paths.size(); i++) {
@@ -945,7 +945,7 @@ int main(int argc, char* argv[]) {
         case 2: {            
             EPS=1.;
             auto t1 = std::chrono::steady_clock::now();
-            DynamicSimplePlanarOracle oracle(n, edges, distances, labels, EPS);
+            DynamicSimplePlanarOracle oracle(n, edges, distances, labels, EPS, 3, true);
             auto t2 = std::chrono::steady_clock::now();
             build_time = t2 - t1;
             for (size_t i = 0; i < test_paths.size(); i++) {
@@ -962,7 +962,7 @@ int main(int argc, char* argv[]) {
         case 3: {
             EPS=4.;
             auto t1 = std::chrono::steady_clock::now();
-            DynamicSimplePlanarOracle oracle(n, edges, distances, labels, EPS);
+            DynamicSimplePlanarOracle oracle(n, edges, distances, labels, EPS, 3, true);
             auto t2 = std::chrono::steady_clock::now();
             build_time = t2 - t1;
             for (size_t i = 0; i < test_paths.size(); i++) {

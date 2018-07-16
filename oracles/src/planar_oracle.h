@@ -40,7 +40,8 @@ protected:
             int n,
             const vector< pair< int, int > >& edges, 
             const vector< W >& weights,
-            W eps);
+            W eps,
+            int jump=2);
 
     //! Split set of vertices into layers 
     virtual

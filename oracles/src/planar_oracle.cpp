@@ -17,7 +17,8 @@ PlanarOracle::initialize(
         int n,
         const vector< pair< int, int > >& edge, 
         const vector< W >& weight,
-        W eps) {
+        W eps,
+        int jump) {
     PlanarGraph graph(n);
 
     for (int i=0; i<(int)edge.size(); ++i) {
@@ -56,7 +57,7 @@ PlanarOracle::initialize(
                     tmpSources[i]);
         }
 
-        alpha *= 2;
+        alpha *= jump;
     }
   //  cout << "log(Stretch) = " << rounds << endl;
 }

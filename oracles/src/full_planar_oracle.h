@@ -620,12 +620,13 @@ class DynamicSimplePlanarOracle : public PlanarOracle {
         }
 
         // pos >= 1, indeks w tablicy h to jednoczesnie pozycja na kopcu
-        void remove(int pos, vector<Vertex> &vertices) {
+        void remove(int pos, vector<Vertex> &vertices) {            
             if(h.size() < 2) return;
             if(h.size()==2) {
                 h.pop_back();
                 return;
             }
+            Comparator less(vertices);
             // w gore
             while(pos > 1) {
                 vertices[h[pos/2].v].heapPtrs[h[pos/2].p_v]=pos;
@@ -662,7 +663,7 @@ class DynamicSimplePlanarOracle : public PlanarOracle {
 
 
     struct Portal {
-        unordered_map<int, set< pair<W, int> > > N_l; // mapa etykieta -> kopiec z wierzch. o tej etykiecie
+        unordered_map<int, Heap > N_l; // mapa etykieta -> kopiec z wierzch. o tej etykiecie
         Portal() {}
     };
     vector< Portal > portals; // globalna lista portali
@@ -777,24 +778,28 @@ class DynamicSimplePlanarOracle : public PlanarOracle {
     virtual
     void applyLabel(int v, int l) {
         vertices[v].label = l;
-        for (auto &p: vertices[v].portals) {
-            portals[p.first].N_l[l].insert(make_pair(p.second, v));
-        }
+        if(l!=forb_lab)
+            for (int p_v=0; p_v< vertices[v].portals.size(); ++p_v)
+                vertices[v].heapPtrs.push_back(portals[vertices[v].portals[p_v].first].N_l[l].push(v,p_v));
     }
 
     virtual
     void purgeLabel(int v) {
         int l = vertices[v].label;
 
-        for (auto &p: vertices[v].portals) {
-            auto it = portals[p.first].N_l.find(l);
-            if(it!=portals[p.first].N_l.end()) {
-                it->second.erase(make_pair(p.second, v));
-                if (it->second.empty()) {
-                    portals[p.first].N_l.erase(it);
-                }
+        if(l!=forb_lab) {
+            for (int p_v=0; p_v < vertices[v].portals.size(); ++p_v) {
+                int p=vertices[v].portals[p_v].first;
+                auto it = portals[p].N_l.find(l);
+                assert(it!=portals[p.first].N_l.end());
+                it->second.remove(vertices[v].heapPtrs[p_v]);
+                if (it->second.empty())
+                        portals[p.first].N_l.erase(it);
             }
         }
+
+        vertices[v].label=forb_lab;
+        vertices[v].heapPtrs.clear();
     }
 
 public:
@@ -814,8 +819,7 @@ public:
 
         initialize(n, edges, weights, eps, jump);
 
-        for(int i=0; i<n; ++i)
-            if(llabels[i]!=forb_lab) applyLabel(i,llabels[i]);
+        for(int i=0; i<n; ++i) applyLabel(i,llabels[i]);
     //long long sump = 0, sumdist=0;//, sumrp=0;
     //    for (auto &v: vertices) {
     //    sump += (int)v.portals.size();
@@ -844,7 +848,7 @@ public:
     virtual
     void setLabel(int v, int l) {
         purgeLabel(v);
-        if(l!=forb_lab) applyLabel(v, l);
+        applyLabel(v, l);
     }
 
     virtual
