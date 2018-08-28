@@ -14,7 +14,8 @@ private:
     std::unordered_map<int, std::set<int>> lbl_to_ver;
 
 public:
-    LCAOracle(std::vector<std::pair<int, int>> &_edges, std::vector<W> &_weights, std::vector<char> &_types, std::vector<int> &_labels, std::vector<std::pair<double, double> > &_coords);
+    LCAOracle(std::vector<std::pair<int, int>> &_edges, std::vector<W> &_weights, std::vector<char> &_types,
+              std::vector<int> &_labels, std::vector<std::pair<double, double> > &_coords, int _number_of_trees = 24);
 
     float distanceToVertex(int s, int t);
     std::pair<float, int> distanceToLabel(int s, int l);

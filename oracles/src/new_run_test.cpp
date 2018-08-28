@@ -72,6 +72,7 @@ void print_help() {
                     "                      11: Dijkstra\n"
                     "                      12: Astar\n"
                     "                      13: RoutingKitOracle\n"
+                    "                      14: LCA Oracle\n\n"
 
                     "  -EPS float   : Epsilon value for planar oracles (default = 1.0), ignored at the moment\n\n"
                     "  -MPD float   : Minimal distances between portals for hierarchal oracles (default 0 for light, 15 for full)\n\n"

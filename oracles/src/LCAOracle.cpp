@@ -1,12 +1,23 @@
 #include <vector>
 #include <tuple>
 #include <algorithm>
+#include <cmath>
 
 #include "LCAOracle.h"
 
+#define PI 3.14159265
+
 using namespace std;
 
-LCAOracle::LCAOracle(std::vector<std::pair<int, int>> &_edges, std::vector<W> &_weights, std::vector<char> &_types, std::vector<int> &_labels, std::vector<std::pair<double, double> > &_coords): labels(_labels) {
+// calculate distance from line crosing points (x1, y1) (x2, y2) from point (x0, y0)
+double point_line_dist(double x0, double y0, double x1, double y1, double x2, double y2) {
+    double num = abs((y2 - y1)*x0 - (x2 - x1)*y0 + x2*y1 - y2*x1);
+    double dem = sqrt((y2 - y1)*(y2 - y1) + (x2 - x1) * (x2 - x1));
+    return num / dem;
+}
+
+LCAOracle::LCAOracle(std::vector<std::pair<int, int>> &_edges, std::vector<W> &_weights, std::vector<char> &_types, std::vector<int> &_labels,
+                     std::vector<std::pair<double, double> > &_coords, int _number_of_trees): labels(_labels) {
     vector<vector<Edge>> edges(_labels.size());
     for (size_t i = 0; i < _edges.size(); i++) {
         edges[_edges[i].first].emplace_back(Edge(_types[i], _edges[i].second, _weights[i]));
@@ -19,15 +30,19 @@ LCAOracle::LCAOracle(std::vector<std::pair<int, int>> &_edges, std::vector<W> &_
         }
     }
 
-    // Znajdź otoczkę
-    double min = 10000;
+    // Find convex hull
+    double min = 10000, avg_x = 0, avg_y = 0;
     size_t imin = -1;
     for (size_t i = 0; i < _coords.size(); i++) {
         if (_coords[i].second < min) {
             min = _coords[i].second;
             imin = i;
         }
+        avg_x += _coords[i].first;
+        avg_y += _coords[i].second;
     }
+    avg_x /= _coords.size();
+    avg_y /= _coords.size();
 
     vector<int> index(_coords.size(), -1);
     for (int i=0; i < (int)index.size(); i++) {
@@ -110,10 +125,47 @@ LCAOracle::LCAOracle(std::vector<std::pair<int, int>> &_edges, std::vector<W> &_
 //        }
 //    }
 
-    for (int &i: convex_hull) {
-        tree_roots.insert(i);
+    // Add convex hull to LCA roots
+//    for (int &i: convex_hull) {
+//        tree_roots.insert(i);
+//    }
+//    printf("%lu\n", tree_roots.size());
+
+
+    // Select N points ass roots of lca trees, selected points are near convex hull and N directions
+    for (int i=0; i < _number_of_trees; i++) {
+        double direction = (i*2*PI)/(double)_number_of_trees;
+        double max_x = avg_x + cos(direction)*1000;
+        double max_y = avg_y + sin(direction)*1000;
+        int root = -1;
+        double root_dist = 1000000;
+        for (size_t j=0; j<_coords.size(); j++) {
+            if (_coords[j].first != avg_x || _coords[j].second != avg_y) {
+                double angle = atan2(_coords[j].first - avg_x, _coords[j].second - avg_y);
+                // Only check points which are more or less in given direction
+                if (angle < 0) angle += 2*PI;
+                if (abs(angle - direction) < 0.5) {
+                    double direction_distance = point_line_dist(_coords[j].first, _coords[j].second, avg_x, avg_y, max_x, max_y);
+                    double hull_distance = 1000000;
+                    for (size_t k=0; k+1<convex_hull.size(); k++) {
+                        double hdist = point_line_dist(
+                                _coords[j].first, _coords[j].second, _coords[convex_hull[k]].first, _coords[convex_hull[k]].second,
+                                _coords[convex_hull[k+1]].first, _coords[convex_hull[k+1]].second);
+                        if (hdist < hull_distance) {
+                            hull_distance = hdist;
+                        }
+                    }
+                    if (root_dist > direction_distance + hull_distance*2) {
+                        root = j;
+                        root_dist = direction_distance + hull_distance*2;
+                    }
+                }
+            }
+        }
+        tree_roots.insert(root);
     }
-    printf("%lu\n", tree_roots.size());
+
+
     for (int r: tree_roots) {
         shortest_paths.emplace_back(LCATree(_coords.size(), r, edges));
     }
