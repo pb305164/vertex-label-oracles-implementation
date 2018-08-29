@@ -39,8 +39,12 @@ RoutingKitOracle::RoutingKitOracle(char *pbf_file, std::vector<int> &_labels, ve
 
 float RoutingKitOracle::distanceToVertex(int s, int t) {
     ch_query.reset().add_source(s).add_target(t).run();
+    W got = ch_query.get_distance()/1000;
     vector<unsigned> path = ch_query.get_node_path();
-    W got = verify_path(path);
+    //int path_len = 0;
+    //for(auto x:path) ++path_len;
+    //W got = verify_path(path);
+    //W got = (W) path_len;
     return got;
 }
 
@@ -54,7 +58,8 @@ pair<float, int> RoutingKitOracle::distanceToLabel(int s, int l) {
         }
         ch_query.run();
         vector<unsigned> path = ch_query.get_node_path();
-        W got = verify_path(path);
+        W got = ch_query.get_distance()/1000;
+        //W got = verify_path(path);
         return make_pair(got, (int)ch_query.get_used_target());
     }
     return make_pair(-1, -1);

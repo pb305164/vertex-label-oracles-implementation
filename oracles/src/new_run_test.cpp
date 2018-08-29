@@ -576,6 +576,7 @@ void run_VV_VL_SL_queries(FILE *out_file, T &oracle, vector<tuple<int, int, int,
     int count_q=0,count_u=0;
     float sum_ratio=0., max_ratio=0.; float max_ratio_dist=0.;
     W d_got,d_exp;
+    W max_path_len=0.;
     std::chrono::duration<double, std::milli> time;
     std::chrono::duration<double, std::milli> t_sum_q = std::chrono::milliseconds::zero(),
                                               t_sum_u = std::chrono::milliseconds::zero();
@@ -590,6 +591,7 @@ void run_VV_VL_SL_queries(FILE *out_file, T &oracle, vector<tuple<int, int, int,
             if(max_ratio < d_got/d_exp) {
                 max_ratio=max(max_ratio,d_got/d_exp);
                 max_ratio_dist=d_exp;
+                max_path_len=max(max_path_len,d_got);
             }
             count_q++; t_sum_q+=time;
         } else if (get<0>(q) == 1) {
@@ -609,7 +611,7 @@ void run_VV_VL_SL_queries(FILE *out_file, T &oracle, vector<tuple<int, int, int,
             exit(1);
         }
         count++;
-        if (count%sample_size==0) {
+        if ( count % sample_size == 0 ) {
             //fprintf(out_file, "%ld\n", get_mem_usage());
             float avr_q_time=0.; float avr_u_time=0.; float avr_time=0.; float avr_ratio=0.;
             if(count_q > 0) {
@@ -620,14 +622,15 @@ void run_VV_VL_SL_queries(FILE *out_file, T &oracle, vector<tuple<int, int, int,
             if(count_u+count_q > 0)
                 avr_time=(t_sum_q.count()+t_sum_u.count())/(count_u+count_q);
 
-            fprintf(out_file, "%f %f %f %f %f %f\n",
+            fprintf(out_file, "%f %f %f %f %f %f %f\n",
                     avr_q_time,
                     avr_u_time,
                     avr_time,
                     avr_ratio,
                     max_ratio,
-                    max_ratio_dist);
-            count_q=0; count_u=0; sum_ratio=0.; max_ratio=0.; max_ratio_dist=0.;
+                    max_ratio_dist,
+                    max_path_len);
+            count_q=0; count_u=0; sum_ratio=0.; max_ratio=0.; max_ratio_dist=0.; max_path_len=0.;
             t_sum_q = std::chrono::milliseconds::zero();
             t_sum_u = std::chrono::milliseconds::zero();
         }
@@ -889,31 +892,35 @@ int main(int argc, char* argv[]) {
     }
 
     //WYPISZ ROZMIAR GRAFU I ORIENTACYJNĄ INFORMACJĘ DOT. ETYKIET
-    //printf("Nodes: %lu, Edges: %lu\n", labels.size(), edges.size());
+    printf("Nodes: %lu, Edges: %lu\n", labels.size(), edges.size());
 
-    //int max_labell=0;
-    //for(int i=0; i<labels.size(); ++i)
-    //    max_labell=max(max_labell,labels[i]);
+    int max_labell=0;
+    for(int i=0; i<labels.size(); ++i)
+        max_labell=max(max_labell,labels[i]);
 
-    //vector<int> label_counts;
-    //int lcs=max_labell+1;
-    //label_counts.resize(lcs);
-    //fill(label_counts.begin(),label_counts.end(),0);
-    //for(int i=0; i<labels.size(); ++i) {
-    //    label_counts[labels[i]]++;
-    //}
+    vector<int> label_counts;
+    int lcs=max_labell+1;
+    label_counts.resize(lcs);
+    fill(label_counts.begin(),label_counts.end(),0);
+    for(int i=0; i<labels.size(); ++i) {
+        label_counts[labels[i]]++;
+    }
 
-    //cout <<  lcs << "labels" << endl;
-    //sort(label_counts.begin(),label_counts.end());
-    //for(int i=0; i<lcs; ++i) cout << label_counts[lcs-1-i] << ",";
-    //cout << endl;
+    cout <<  lcs << "labels" << endl;
+    cout << label_counts[0] <<" vertices with label 0." << endl;
+    cout << label_counts[1] <<" vertices with label 1." << endl;
+    cout << label_counts[2] <<" vertices with label 2." << endl;
+
+    sort(label_counts.begin(),label_counts.end());
+    for(int i=0; i<min(10,lcs); ++i) cout << label_counts[lcs-1-i] << ",";
+    cout << endl;
 
     std::chrono::duration<double, std::milli> build_time;
     switch (oracle_type) {
         case 0: {
             EPS=1.;
             auto t1 = std::chrono::steady_clock::now();
-            DynamicSimplePlanarOracle oracle(n, edges, distances, labels, EPS, 2, false);
+            DynamicSimplePlanarOracle oracle(n, edges, distances, labels, EPS, false,2 );
             auto t2 = std::chrono::steady_clock::now();
             build_time = t2 - t1;
             for (size_t i = 0; i < test_paths.size(); i++) {
@@ -929,13 +936,14 @@ int main(int argc, char* argv[]) {
         case 1: {
             EPS=4.;
             auto t1 = std::chrono::steady_clock::now();
-            DynamicSimplePlanarOracle oracle(n, edges, distances, labels, EPS, 2, false);
+            DynamicSimplePlanarOracle oracle(n, edges, distances, labels, EPS, false, 2);
             auto t2 = std::chrono::steady_clock::now();
             build_time = t2 - t1;
             for (size_t i = 0; i < test_paths.size(); i++) {
                 FILE *out_file = prep_test(i);
                 prep_oracle(oracle);
                 fprintf(out_file, "%d %d %lf %ld\n", sample_count, sample_size, build_time.count(), get_mem_usage());
+                //cout << "ok, gonna do some testing now..." << endl;
                 run_VV_VL_SL_queries(out_file, oracle, queries);
                 fclose(out_file);
             }
@@ -945,7 +953,7 @@ int main(int argc, char* argv[]) {
         case 2: {            
             EPS=1.;
             auto t1 = std::chrono::steady_clock::now();
-            DynamicSimplePlanarOracle oracle(n, edges, distances, labels, EPS, 3, true);
+            DynamicSimplePlanarOracle oracle(n, edges, distances, labels, EPS, true, 2);
             auto t2 = std::chrono::steady_clock::now();
             build_time = t2 - t1;
             for (size_t i = 0; i < test_paths.size(); i++) {
@@ -962,7 +970,7 @@ int main(int argc, char* argv[]) {
         case 3: {
             EPS=4.;
             auto t1 = std::chrono::steady_clock::now();
-            DynamicSimplePlanarOracle oracle(n, edges, distances, labels, EPS, 3, true);
+            DynamicSimplePlanarOracle oracle(n, edges, distances, labels, EPS, true, 2);
             auto t2 = std::chrono::steady_clock::now();
             build_time = t2 - t1;
             for (size_t i = 0; i < test_paths.size(); i++) {
@@ -1125,7 +1133,8 @@ int main(int argc, char* argv[]) {
                 FILE *out_file = prep_test(i);
                 prep_oracle(oracle);
                 fprintf(out_file, "%d %d %lf %ld\n", sample_count, sample_size, build_time.count(), get_mem_usage());
-                run_all_queries(out_file, oracle, queries);
+                run_VV_VL_SL_queries(out_file, oracle, queries);
+                //run_all_queries(out_file, oracle, queries);
                 fclose(out_file);
             }
             break;
