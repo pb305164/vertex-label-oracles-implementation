@@ -13,6 +13,7 @@
 #include <set>
 #include <cstring>
 
+#define MAX_QUERIES_SIZE 400000000
 
 using namespace std;
 
@@ -22,7 +23,7 @@ typedef priority_queue<QEl, vector<QEl>, greater<QEl>> PQ;
 vector<char> types;
 vector<W> max_speeds;
 vector<W> distances;
-vector<pair<W, W> > coords;
+vector<pair<double, double>> coords;
 vector<int> labels;
 vector<vector<pair<W, int>>> edges;
 int n, m, max_label;
@@ -119,6 +120,11 @@ void calc_some_vertex_vertex_queries(vector<pair<W, pair<int, int>>> &some_vv_di
 
     assert(VER_LOOP < n);
 
+    auto rd = default_random_engine();
+    auto add_rng2 = uniform_real_distribution<double>(0, 1);
+    double add_limit = (double)MAX_QUERIES_SIZE / (double)(max_label*n);
+    fprintf(stderr, "limit %f\n", add_limit);
+
     auto ver_rng = bind(uniform_int_distribution<int>(0, n-1), default_random_engine());
     auto add_rng = bind(uniform_int_distribution<int>(0, 9), default_random_engine());
     for (int i=0; i<VER_LOOP; i++) {
@@ -131,8 +137,14 @@ void calc_some_vertex_vertex_queries(vector<pair<W, pair<int, int>>> &some_vv_di
         queue.push(make_pair(0, v));
         dijkstra(queue, dist);
 
-        for (int j=0; j<n; j++) if (dist[j] != 0 && add_rng() == 0) some_vv_dist.push_back(make_pair(dist[j], make_pair(v, j)));
+        for (int j=0; j<n; j++) {
+            if (dist[j] != 0 && add_rng(rd) == 0 && add_rng2(rd) < add_limit) {
+                some_vv_dist.push_back(make_pair(dist[j], make_pair(v, j)));
+            }
+        }
     }
+
+    fprintf(stderr, "VV SIZE %lu\n", some_vv_dist.size());
 
     // Sort by distance
     auto cmp = [](pair<W, pair<int, int> > &a, pair<W, pair<int, int> > &b) { return a.first < b.first; };
@@ -141,6 +153,11 @@ void calc_some_vertex_vertex_queries(vector<pair<W, pair<int, int>>> &some_vv_di
 
 void calc_all_vertex_label(vector<pair<W, pair<int, int>>> &all_dist) {
     vector<W> dist(n);
+
+    auto rd = default_random_engine();
+    auto add_rng2 = uniform_real_distribution<double>(0, 1);
+    double add_limit = (double)MAX_QUERIES_SIZE / (double)(max_label*n);
+    fprintf(stderr, "limit %f\n", add_limit);
 
     for (int i=1; i<max_label; i++) {
         PQ queue;
@@ -155,11 +172,13 @@ void calc_all_vertex_label(vector<pair<W, pair<int, int>>> &all_dist) {
         dijkstra(queue, dist);
 
         for (int j=0; j<n; j++) {
-            if (dist[j] != 0 && dist[j] != infinity) {
+            if (dist[j] != 0 && dist[j] != infinity && add_rng2(rd) < add_limit) {
                 all_dist.push_back(make_pair(dist[j], make_pair(j, i)));
             }
         }
     }
+
+    fprintf(stderr, "VL SIZE %lu\n", all_dist.size());
 
     // Sort by distance
     auto cmp = [](pair<W, pair<int, int> > &a, pair<W, pair<int, int> > &b) { return a.first < b.first; };
@@ -169,6 +188,11 @@ void calc_all_vertex_label(vector<pair<W, pair<int, int>>> &all_dist) {
 
 void calc_all_label_label_dist(vector<pair<W, pair<int, int>>> &all_dist) {
     vector<W> dist(n);
+
+    auto rd = default_random_engine();
+    auto add_rng2 = uniform_real_distribution<double>(0, 1);
+    double add_limit = (double)MAX_QUERIES_SIZE / (double)(max_label*n);
+    fprintf(stderr, "limit %f\n", add_limit);
 
     for (int i=1; i<max_label; i++) {
         unordered_map<int, W> lbl_dist;
@@ -188,9 +212,11 @@ void calc_all_label_label_dist(vector<pair<W, pair<int, int>>> &all_dist) {
             }
         }
         for (auto &p: lbl_dist) {
-            all_dist.push_back(make_pair(p.second, make_pair(i, p.first)));
+            if (add_rng2(rd) < add_limit) all_dist.push_back(make_pair(p.second, make_pair(i, p.first)));
         }
     }
+
+    fprintf(stderr, "LL SIZE %lu\n", all_dist.size());
 
     // Sort by distance
     auto cmp = [](pair<W, pair<int, int> > &a, pair<W, pair<int, int> > &b) { return a.first < b.first; };
@@ -298,7 +324,7 @@ float get_distance_between_labels(int l1, int l2, unordered_map<int, set<int>> &
 
 int get_border_vertex() {
     int lv = -1;
-    W lx = 10000;
+    double lx = 10000;
     for (int i=0; i<n; i++) {
         if (coords[i].first < lx && labels[i] == 0) {
             lx = coords[i].first;

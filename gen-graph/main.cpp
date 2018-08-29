@@ -207,7 +207,11 @@ string get_road_type(mpreal max_speed) {
 
 void print_osm(unordered_mapB<int, Node> &nodes, unordered_mapB<int, set<Edge>> &edges) {
     string new_path(osm_path);
-    new_path.insert(new_path.find_last_of("/")+1, "Graph_");
+    if (!planarize) {
+        new_path.insert(new_path.find_last_of("/") + 1, "Graph_");
+    } else {
+        new_path.insert(new_path.find_last_of("/") + 1, "Graph_Planar_");
+    }
     FILE *osm_file = fopen(new_path.c_str(), "w");
     if (osm_file == nullptr) {
         fprintf(stderr, "ERROR while writing new osm file\n");

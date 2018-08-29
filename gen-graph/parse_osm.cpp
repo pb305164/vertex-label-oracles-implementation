@@ -330,6 +330,7 @@ void add_labels(pugi::xml_document &doc,
 
             // Add new node and connect it to nearest if new
             pair<Node, mpreal> near = kdtree.find_nearest(poi_lat, poi_lon);
+            // Only add new nodes if closer then 1km
             if (nodes.find(poi_id) == nodes.end() && near.second < 1000) {
                 nodes[poi_id] = Node(poi_lat, poi_lon, poi_id, lbl, osm_id);
                 edges[poi_id].insert(Edge(poi_id, near.first.id, FOOT_SPEED, (char)highway_filter.size(), near.second));

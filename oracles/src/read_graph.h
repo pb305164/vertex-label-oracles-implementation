@@ -13,7 +13,7 @@ using std::pair;
 using std::make_pair;
 
 void read_graph(FILE *pfile, int &n, int &m, int &max_label, W &max_speed, vector<pair<int, int>> &edges,
-                vector<char> &edge_types, vector<W> &max_speeds, vector<W> &distances, vector<int> &labels, vector<pair<W, W> > &coords) {
+                vector<char> &edge_types, vector<W> &max_speeds, vector<W> &distances, vector<int> &labels, vector<pair<double, double> > &coords) {
     fscanf(pfile, "%d %d %f", &n, &m, &max_speed);
     max_label=0;
     edges.clear();
@@ -24,8 +24,8 @@ void read_graph(FILE *pfile, int &n, int &m, int &max_label, W &max_speed, vecto
     coords.clear();
     for (int i=0; i<n; i++) {
         int k;
-        W lat, lon;
-        fscanf(pfile, "%d %f %f", &k, &lat, &lon);
+        double lat, lon;
+        fscanf(pfile, "%d %lf %lf", &k, &lat, &lon);
         if (k > max_label) max_label = k;
         labels.push_back(k);
         coords.push_back(make_pair(lat, lon));

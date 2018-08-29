@@ -13,12 +13,12 @@ class OsrmOracle {
 private:
     osrm::EngineConfig config;
     const osrm::OSRM osrm;
-    std::vector<std::pair<float, float> > coords;
+    std::vector<std::pair<double, double> > coords;
     std::vector<int> labels;
     std::unordered_map<int, std::set<int>> lbl_to_ver;
 
 public:
-    OsrmOracle(char *osrm_file, std::vector<std::pair<float, float> > &_coords, std::vector<int> &_labels);
+    OsrmOracle(char *osrm_file, std::vector<std::pair<double, double> > &_coords, std::vector<int> &_labels);
 
     float distanceToVertex(int s, int t);
     std::pair<float, int> distanceToLabel(int s, int l);
