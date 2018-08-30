@@ -173,17 +173,25 @@ LCAOracle::LCAOracle(std::vector<std::pair<int, int>> &_edges, std::vector<W> &_
 
 W LCAOracle::distanceToVertex(int s, int t) {
     W dist = numeric_limits<W>::max();
+    vector<int> path;
+    LCATree *min_tree;
+
     for (auto &tree: shortest_paths) {
         W q = tree.query(s, t);
         if (q < dist) {
             dist = q;
+            min_tree = &tree;
         }
     }
+    path = min_tree->find_path(s, t);
     return dist;
 }
 
 std::pair<W, int> LCAOracle::distanceToLabel(int s, int l) {
     W dist = numeric_limits<W>::max();
+    vector<int> path;
+    LCATree *min_tree;
+
     int min_t=-1;
     for (int t: lbl_to_ver[l]) {
         for (auto &tree: shortest_paths) {
@@ -191,14 +199,19 @@ std::pair<W, int> LCAOracle::distanceToLabel(int s, int l) {
             if (q < dist) {
                 dist = q;
                 min_t = t;
+                min_tree = &tree;
             }
         }
     }
+    path = min_tree->find_path(s, min_t);
     return make_pair(dist, min_t);
 }
 
 std::pair<W, std::pair<int, int> > LCAOracle::distanceBetweenLabels(int l1, int l2) {
     W dist = numeric_limits<W>::max();
+    vector<int> path;
+    LCATree *min_tree;
+
     int min_s=-1, min_t=-1;
     for (int s: lbl_to_ver[l1]) {
         for (int t: lbl_to_ver[l2]) {
@@ -208,10 +221,12 @@ std::pair<W, std::pair<int, int> > LCAOracle::distanceBetweenLabels(int l1, int 
                     dist = q;
                     min_s = s;
                     min_t = t;
+                    min_tree = &tree;
                 }
             }
         }
     }
+    path = min_tree->find_path(min_s, min_t);
     return make_pair(dist, make_pair(min_s, min_t));
 }
 

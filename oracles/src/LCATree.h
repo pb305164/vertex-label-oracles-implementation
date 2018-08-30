@@ -8,11 +8,13 @@
 class LCATree {
 private:
     std::vector<W> distance;
+    std::vector<int> parent;
     std::vector<int> e, l, r;
     std::vector<std::vector<int>> st;
 public:
     LCATree(int _size, int _root, std::vector<std::vector<Edge>> &edges);
     W query(int s, int t);
+    vector<int> find_path(int s, int t);
 };
 
 
