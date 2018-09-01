@@ -70,8 +70,7 @@ void preprocess_RMQ(vector<vector<int>> &st, vector<int> &l)
     }
 }
 
-LCATree::LCATree(int _size, int root, vector<vector<Edge>> &edges): distance(_size, infinity), r(_size, -1) {
-    vector<int> parent(_size, -1);
+LCATree::LCATree(int _size, int root, vector<vector<Edge>> &edges): distance(_size, infinity), parent(_size, -1), r(_size, -1) {
     vector<std::vector<int>> children(_size);
 
     dijkstra(_size, distance, parent, edges, root);
@@ -107,4 +106,35 @@ W LCATree::query(int s, int t) {
         return distance[s] + distance[t] - 2*distance[e[st[a][log]]];
     }
     return distance[s] + distance[t] - 2*distance[e[st[b-p][log]]];
+}
+
+vector<int> LCATree::find_path(int s, int t) {
+    vector<int> path, rev_path;
+    if (s == t) {
+        path.push_back(s);
+        return path;
+    }
+    int a = min(r[s], r[t]), b = max(r[s], r[t]), log=0, p=1;
+    while (2*p<b-a) {
+        p*=2;
+        log++;
+    }
+    int i = s, lca;
+    if (l[st[a][log]] < l[st[b-p][log]]) {
+        lca = e[st[a][log]];
+    } else {
+        lca = e[st[b-p][log]];
+    }
+    while (i != lca) {
+        path.push_back(i);
+        i = parent[i];
+    }
+    path.push_back(lca);
+    i = t;
+    while (i != lca) {
+        rev_path.push_back(i);
+        i = parent[i];
+    }
+    path.insert(path.end(), rev_path.rbegin(), rev_path.rend());
+    return path;
 }
